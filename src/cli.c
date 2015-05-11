@@ -304,13 +304,13 @@ const clivalue_t valueTable[] =
     { VAR_UINT8,  1,       1,        200, &cfg.P8[ROLL],               "p_roll"                 },
     { VAR_UINT8,  1,       0,        200, &cfg.I8[ROLL],               "i_roll"                 },
     { VAR_UINT8,  1,       0,        200, &cfg.D8[ROLL],               "d_roll"                 },
-    { VAR_UINT8,  1,       0,        200, &cfg.P8[YAW],                "p_yaw"                  },
+    { VAR_UINT8,  1,       1,        200, &cfg.P8[YAW],                "p_yaw"                  },
     { VAR_UINT8,  1,       0,        200, &cfg.I8[YAW],                "i_yaw"                  },
     { VAR_UINT8,  1,       0,        200, &cfg.D8[YAW],                "d_yaw"                  },
-    { VAR_UINT8,  1,       0,        200, &cfg.P8[PIDALT],             "p_alt"                  },
+    { VAR_UINT8,  1,       1,        200, &cfg.P8[PIDALT],             "p_alt"                  },
     { VAR_UINT8,  1,       0,        200, &cfg.I8[PIDALT],             "i_alt"                  },
     { VAR_UINT8,  1,       0,        200, &cfg.D8[PIDALT],             "d_alt"                  },
-    { VAR_UINT8,  1,       0,        200, &cfg.P8[PIDLEVEL],           "p_level"                },
+    { VAR_UINT8,  1,       1,        200, &cfg.P8[PIDLEVEL],           "p_level"                },
     { VAR_UINT8,  1,       0,        200, &cfg.I8[PIDLEVEL],           "i_level"                },
     { VAR_UINT8,  1,       0,        200, &cfg.D8[PIDLEVEL],           "d_level"                },
     { VAR_UINT8,  0,       0,          6, &cfg.snr_type,               "snr_type"               },
@@ -928,7 +928,7 @@ static bool cliSetVar(const clivalue_t *var, int32_t intvalue, float fltvalue)
     if (!inrange)return false;
     switch (var->type)
     {
-    case VAR_UINT8:
+    case VAR_UINT8:                                                     // Note: The value range must be set correctly in the list so it doesn't overflow the datatype
         *(uint8_t *)var->ptr = (uint8_t)intvalue;
         break;
     case VAR_INT8:
@@ -1136,8 +1136,8 @@ void serialOSD(void)
 #define RcEndpoint 50
     uint8_t   input, lastinput = 0, brake = 0, brakeval = 0, speeduptimer = 0, exitLCD = 0;
     uint16_t  DatasetNr = 0;
-    const clivalue_t *setval;
-    setval = &valueTable[DatasetNr];
+    const clivalue_t *tablePtr;
+    tablePtr = &valueTable[DatasetNr];
     LCDinit();
     printf(FIRMWAREFORLCD);                                             // Defined in mw.h
     LCDline2();
@@ -1145,9 +1145,9 @@ void serialOSD(void)
     delay(2000);
     LCDclear();
     LCDline1();
-    printf("%s", setval->name);                                         // Display first item anyway (even if lcd ==0) no need for special attention
+    printf("%s", tablePtr->name);                                       // Display first item anyway (even if lcd ==0) no need for special attention
     LCDline2();
-    cliPrintVar(setval, 0);
+    cliPrintVar(tablePtr, 0);
     while (!exitLCD)
     {
         if (DoGetRc50HzTimer())                                         // Start of 50Hz Loop Gathers all Rc Data
@@ -1200,11 +1200,11 @@ void serialOSD(void)
                     if (DatasetNr == VALUE_COUNT) DatasetNr = 0;
                 }
                 while (!valueTable[DatasetNr].lcd);
-                setval = &valueTable[DatasetNr];
+                tablePtr = &valueTable[DatasetNr];
                 LCDclear();
-                printf("%s", setval->name);
+                printf("%s", tablePtr->name);
                 LCDline2();
-                cliPrintVar(setval, 0);
+                cliPrintVar(tablePtr, 0);
                 break;
             case 2:                                                     // UP
                 do                                                      // Search for next Dataset
@@ -1213,23 +1213,23 @@ void serialOSD(void)
                     DatasetNr--;
                 }
                 while (!valueTable[DatasetNr].lcd);
-                setval = &valueTable[DatasetNr];
+                tablePtr = &valueTable[DatasetNr];
                 LCDclear();
-                printf("%s", setval->name);
+                printf("%s", tablePtr->name);
                 LCDline2();
-                cliPrintVar(setval, 0);
+                cliPrintVar(tablePtr, 0);
                 break;
             case 3:                                                     // LEFT
-                if (brakeval != 8) changeval(setval,-1);                // Substract within the limit
-                else changeval(setval,-5);
+                if (brakeval != 8) changeval(tablePtr, -1);             // Substract within the limit
+                else changeval(tablePtr, -5);
                 LCDline2();
-                cliPrintVar(setval, 0);
+                cliPrintVar(tablePtr, 0);
                 break;
             case 4:                                                     // RIGHT
-                if (brakeval != 8) changeval(setval,1);                 // Add within the limit
-                else changeval(setval,5);
+                if (brakeval != 8) changeval(tablePtr, 1);              // Add within the limit
+                else changeval(tablePtr, 5);
                 LCDline2();
-                cliPrintVar(setval, 0);
+                cliPrintVar(tablePtr, 0);
                 break;
             }
         }                                                               // End of 50Hz Loop
@@ -1275,8 +1275,8 @@ static void changeval(const clivalue_t *var, const int8_t adder)
     default:
         break;
     }
-    value  = constrain_int(value  + adder               , var->min, var->max);
-    valuef = constrain_flt(valuef + (float)adder/1000.0f, var->min, var->max);
+    value  = constrain_int(value  + adder                 , var->min, var->max);
+    valuef = constrain_flt(valuef + (float)adder / 1000.0f, var->min, var->max);
     cliSetVar(var, value, valuef);
 }
 

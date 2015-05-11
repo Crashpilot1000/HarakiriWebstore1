@@ -15,6 +15,10 @@
 #define LON  1
 #define GPS_Y 0
 #define GPS_X 1
+#define GPSLatLonErrorVal      1900000000   // 190 Deg * 10^7 can never be reached
+#define GPSBearingErrorVal          40000   // Normal Range 0 - 36000
+#define GPSDistErrorVal         100000000   // 1000 Km is assumed to be a wrong distance...
+#define GPSSpeedErrorVal            65535   // 65535 cm/s = 2359,26 Km/h
 
 // RC & EXPO
 #define RcTrimstep 2.0f
@@ -214,27 +218,27 @@ typedef struct flags_t
     uint8_t GTUNE;
 } flags_t;
 
-typedef struct motorMixer16_t
+typedef struct motMixerStorage_t
 {
     int16_t throttle;                       // * MixerMultiply
     int16_t roll;                           // * MixerMultiply
     int16_t pitch;                          // * MixerMultiply
     int16_t yaw;                            // * MixerMultiply
-} motorMixer16_t;
+} motMixerStorage_t;
 
-typedef struct motorMixerflt_t
+typedef struct motMixerUsage_t
 {
     float throttle;
     float roll;
     float pitch;
     float yaw;
-} motorMixerflt_t;
+} motMixerUsage_t;
 
 typedef struct mixer_t
 {
     uint8_t numberMotor;
     uint8_t useServo;
-    const motorMixer16_t *motor;
+    const motMixerStorage_t *motor;
 } mixer_t;
 
 enum
@@ -430,7 +434,7 @@ typedef struct config_t
     float    snr_cf;                        // The bigger, the more Sonarinfluence
     uint8_t  snr_diff;                      // Maximal allowed difference in cm between sonar readouts (100ms rate and maxdiff = 50 means max 5m/s)
     uint8_t  snr_land;                      // This helps Sonar when landing, by setting upper throttle limit to current throttle. - Beware of Trees!!   
-    motorMixer16_t customMixer[MAX_MOTORS]; // custom mixtable
+    motMixerStorage_t customMixer[MAX_MOTORS]; // custom mixtable
 
     // LOGGING
     uint8_t  stat_clear;                    // This will clear the stats between flights, or you can set to 0 and treasue overallstats
@@ -528,7 +532,8 @@ extern int32_t  GPS_WP[2];                  // Currently used WP
 extern volatile uint8_t GPS_numSat;
 extern uint32_t GPS_distanceToHome;         // distance to home
 extern int32_t  GPS_directionToHome;        // direction to home
-extern uint16_t GPS_speed;                  // speed in cm/s
+extern uint16_t GPS_speed_raw;              // speed in cm/s
+extern uint16_t GPS_speed_avg;              // speed in cm/s averaged by moving avg with 6 elements
 extern volatile uint16_t GPS_altitude;      // altitude in m
 extern uint8_t  GPS_update;                 // it's a binary toogle to distinct a GPS position update
 extern float    GPS_angle[2];               // it's the angles that must be applied for GPS correction
@@ -550,6 +555,7 @@ extern bool     BlockGPSAngles;
 extern bool     BlockThrottle;
 extern bool     BlockPitch;
 extern bool     BlockRoll;
+extern float    StickGPSProp;               // 1.0f = no override, 0.0f = maximal override
 extern volatile uint32_t TimestampNewGPSdata; // Crashpilot in micros
 extern int32_t  target_bearing;             // target_bearing is where we should be heading
 extern uint32_t wp_distance;

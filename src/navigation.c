@@ -58,12 +58,21 @@ static int32_t   wrap_18000(int32_t value);
 ////////////////////////////////////////////////////////////////////////////////////
 // Calculate our current speed vector from gps&acc position data
 // This is another important part of the gps ins
+
+static void ResetGPSavgSpeed(uint16_t *list)
+{
+    uint8_t i;
+    for (i = 0; i < 6; i++) list[i] = GPSSpeedErrorVal;                         // Set list to errorvalue
+}
+
 void GPS_calc_velocity(void)                                                    // actual_speed[GPS_Y] y_GPS_speed positve = Up (NORTH) // actual_speed[GPS_X] x_GPS_speed positve = Right (EAST)
 {
     static uint32_t LastTimestampNewGPSdata;
+    static uint16_t GPSrawspeedlist[6];
+    static uint8_t  GPSrawspeedlistElement = 0;
     static bool     INSusable;
     float           gpsHz, tmp0;
-    uint32_t        RealGPSDeltaTime;
+    uint32_t        RealGPSDeltaTime, GPSrawspeedlistSum = 0, GPSrawspeedlistDivisor = 0;
     uint8_t         i;
 
     GPS_calc_longitude_scaling(false);                                          // Init CosLatScaleLon if not already done to avoid div by zero etc..
@@ -78,9 +87,23 @@ void GPS_calc_velocity(void)                                                    
         {
             Real_GPS_coord[LON] = IRQGPS_coord[LON];                            // Make Interrupt GPS coords available here and are IN TIME!
             Real_GPS_coord[LAT] = IRQGPS_coord[LAT];                            // That makes shure they are synchronized and don't randomly appear in the code..
-            GPS_speed           = IRQGPS_speed;
+            GPS_speed_raw       = IRQGPS_speed;
             GPS_ground_course   = IRQGPS_grcrs;
             INSusable = true;                                                   // INS is alive
+            if (GPS_numSat < 5) GPSrawspeedlist[GPSrawspeedlistElement] = GPSSpeedErrorVal; // Speed far off below 5 sats
+            else                GPSrawspeedlist[GPSrawspeedlistElement] = GPS_speed_raw;
+            GPSrawspeedlistElement++;
+            if (GPSrawspeedlistElement == 6) GPSrawspeedlistElement = 0;
+            for (i = 0; i < 6; i++)
+            {
+                if (GPSrawspeedlist[i] != GPSSpeedErrorVal)
+                {
+                    GPSrawspeedlistSum += GPSrawspeedlist[i];
+                    GPSrawspeedlistDivisor++;
+                }
+            }
+            if (GPSrawspeedlistDivisor) GPS_speed_avg = GPSrawspeedlistSum / GPSrawspeedlistDivisor;
+            else                        GPS_speed_avg = GPSSpeedErrorVal;
             gpsHz = 1000.0f / (float)RealGPSDeltaTime;                          // Set GPS Hz, try to filter below
             if (RealGPSDeltaTime >  10 && RealGPSDeltaTime <  30) gpsHz = 50.0f;// 50Hz Data  20ms filter out timejitter
             if (RealGPSDeltaTime >  40 && RealGPSDeltaTime <  60) gpsHz = 20.0f;// 20Hz Data  50ms filter out timejitter
@@ -99,7 +122,11 @@ void GPS_calc_velocity(void)                                                    
     }                                                                           // End of X Hz Loop
     if ((millis() - TimestampNewGPSdata) > 500) INSusable = false;              // INS is NOT OK, too long (500ms) no correction
     if (INSusable) for (i = 0; i < 2; i++) MIX_speed[i] = (ACC_speed[i] + Real_GPS_speed[i]) * 0.5f;
-    else GPS_reset_nav();                                                       // Ins is not possible, reset stuff
+    else
+    {
+        ResetGPSavgSpeed(GPSrawspeedlist);                                      // This will also be the initrun
+        GPS_reset_nav();                                                        // Ins is not possible, reset stuff
+    }
 }
 
 ////////////////////////////////////////////////////////////////////////////////////

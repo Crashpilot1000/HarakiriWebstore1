@@ -46,10 +46,10 @@ bool GPS_alltime(void)
 static void GPS_HzSandbox(void)
 {
     static uint32_t PosHoldBlindTimer = 0, PhTimer1 = 0;
-    static int32_t  AvgSpeed = 0;
     static bool     PHtoofast, PHChange;
-    static uint8_t  PHcascade = 0, LastGPSupdateState;
+    static uint8_t  PHcascade = 0;
     uint16_t        speed;
+    int32_t         tmpi32;
 
     if (!f.ARMED) f.GPS_FIX_HOME = 0;
     if (!f.GPS_FIX_HOME)                                                        // Do relative to home stuff for gui etc
@@ -76,7 +76,7 @@ static void GPS_HzSandbox(void)
         GPS_distanceToHome  /= 100;                                             // Back to meters
         GPS_directionToHome /= 100;                                             // Back to degrees
         if (GPS_distanceToHome > cfg.GPS_MaxDistToHome ) cfg.GPS_MaxDistToHome = GPS_distanceToHome; // Stats
-        if (GPS_speed > cfg.MAXGPSspeed) cfg.MAXGPSspeed = GPS_speed;
+        if (GPS_speed_avg > cfg.MAXGPSspeed) cfg.MAXGPSspeed = GPS_speed_avg;   // Log maxspeed here from average
     }
 
     if (DoingGPS())
@@ -90,11 +90,12 @@ static void GPS_HzSandbox(void)
                 PH1stRun            = false;                                    // Don't do this again ...
                 PHChange            = false;
                 PosHoldBlindTimer   = 0;                                        // Reset Timer
+                PhTimer1            = 0;
                 ph_status           = PH_STATUS_NONE;
                 GPS_reset_nav();                                                // Reset nav Speedvector as well
             }
 
-            if (rcCommand[PITCH] || rcCommand[ROLL])                            // Ph Override
+            if (StickGPSProp != 1.0f)                                           // Ph Override 1.0f = no override, 0.0f = maximal override
             {
                 PosHoldBlindTimer = 0;
                 PHcascade         = 0;                                          // Reset cascade and WP
@@ -110,6 +111,13 @@ static void GPS_HzSandbox(void)
                 }
             }
 
+            if(GPS_speed_avg == GPSSpeedErrorVal)                               // Serious error Abort
+            {
+                PH1stRun  = true;
+                ph_status = PH_STATUS_NONE;
+                return;
+            }
+            
             LocError[LAT] = LocError[LON] = 0;
             switch(PHcascade)
             {
@@ -122,40 +130,22 @@ static void GPS_HzSandbox(void)
             case 1:                                                             // Figure out current speed & brake
                 ph_status = PH_STATUS_WORKING;
                 PHtoofast = true;
-                PhTimer1  = currentTimeMS + 1000;                               // Gather 1s speed of GPS
-                AvgSpeed  = (int32_t)GPS_speed;
-                LastGPSupdateState = GPS_update;
-                PHcascade++;
-            case 2:
-                if(LastGPSupdateState != GPS_update)
+                if (GPS_speed_avg < (uint16_t)cfg.gps_ph_settlespeed) PHcascade++;
+                else
                 {
-                    LastGPSupdateState = GPS_update;
-                    AvgSpeed += (((int32_t)GPS_speed - AvgSpeed) >> 1);
-                    if (currentTimeMS >= PhTimer1)
+                    if(!PhTimer1)
                     {
-                        PhTimer1 = 0;
-                        PHcascade++;
+                        tmpi32   = (((int32_t)GPS_speed_avg - (int32_t)cfg.gps_ph_settlespeed) * 1000) / (int32_t)cfg.gps_ph_brkacc;
+                        PhTimer1 = currentTimeMS + constrain_int(tmpi32, 1, 5000); // t = v/a limit to 5 seconds
                     }
+                    else if (currentTimeMS >= PhTimer1) PHcascade++;
                 }
                 break;
-            case 3:
-                if(LastGPSupdateState != GPS_update)
-                {
-                    LastGPSupdateState = GPS_update;
-                    AvgSpeed += (((int32_t)GPS_speed - AvgSpeed) >> 1);        // Keep averaging speed
-                    if (AvgSpeed < (int32_t)cfg.gps_ph_settlespeed) PHcascade++;
-                    else
-                    {
-                        if(!PhTimer1) PhTimer1 = currentTimeMS + constrain_int(((AvgSpeed - (int32_t)cfg.gps_ph_settlespeed) / (int32_t)cfg.gps_ph_brkacc) * 1000, 1, 5000);  // t = v/a limit to 5 seconds
-                        else if (currentTimeMS >= PhTimer1) PHcascade++;
-                    }
-                }
-                break;
-            case 4:                                                             // Set Waittimer for GPS Catch Up before setting new GPS coords
+            case 2:                                                             // Set Waittimer for GPS Catch Up before setting new GPS coords
                 PHtoofast = false;
                 PhTimer1  = currentTimeMS + (uint32_t)cfg.gps_lag;
                 PHcascade++;
-            case 5:                                                             // Wait for gps to catch up and set new WP
+            case 3:                                                             // Wait for gps to catch up and set new WP
                 if (currentTimeMS >= PhTimer1)                                  // Wait till GPS Lag is done
                 {
                     if(!PHuseGPSWP)                                             // We already know our Ph target
@@ -167,7 +157,7 @@ static void GPS_HzSandbox(void)
                     PHcascade++;                    
                 }
                 break;
-            case 6:                                                             // Do this forever ?
+            case 4:                                                             // Do this forever ?
                 PHtoofast = false;
                 PHChange  = false;
                 GPS_calc_location_error(&GPS_WP[LAT], &GPS_WP[LON]);

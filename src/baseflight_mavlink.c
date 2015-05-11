@@ -492,7 +492,7 @@ void baseflight_mavlink_send_updates(void)                                      
             if (GPS_FIX) tmp = 3;                                               // Report 3Dfix if any fix
 	          mavlink_msg_gps_raw_int_pack(
                 MLSystemID , MLComponentID, &msg2, currentTime, (uint8_t)tmp, Real_GPS_coord[LAT], Real_GPS_coord[LON], GPS_altitude * 1000,
-                65535, 65535, GPS_speed, constrain(GPS_ground_course * 10, 0, 35999), GPS_numSat);
+                65535, 65535, GPS_speed_raw, constrain(GPS_ground_course * 10, 0, 35999), GPS_numSat);
             baseflight_mavlink_send_message(&msg2);
             return;
         }
@@ -514,7 +514,7 @@ void baseflight_mavlink_send_updates(void)                                      
                 if (tmp < 0) tmp += 360;                                        // heading in degrees, in compass units (0..360, 0=north)
             }
             mavlink_msg_vfr_hud_pack(
-                MLSystemID, MLComponentID, &msg2, 0, (float)GPS_speed * 0.01f, tmp,
+                MLSystemID, MLComponentID, &msg2, 0, (float)GPS_speed_raw * 0.01f, tmp,
                 ((int32_t)(rcCommand[THROTTLE] - cfg.esc_min) * 100)/(cfg.esc_max - cfg.esc_min),
                 EstAlt * 0.01f, vario * 0.01f);
             baseflight_mavlink_send_message(&msg2);

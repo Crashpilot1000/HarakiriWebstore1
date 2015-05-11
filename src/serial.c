@@ -153,24 +153,22 @@ static void evaluateCommand(void)
         headSerialReply(0);
         break;
     case MSP_SET_RAW_GPS:
-        GPS_FIX = read8();
-        GPS_numSat = read8();
+        GPS_FIX             = read8();
+        GPS_numSat          = read8();
         Real_GPS_coord[LAT] = read32();
         Real_GPS_coord[LON] = read32();
-        GPS_altitude = read16();
-        GPS_speed = read16();
-        GPS_update |= 2;                              // New data signalisation to GPS functions
+        GPS_altitude        = read16();
+        GPS_speed_raw       = read16();
+        GPS_update         |= 2;                        // New data signalisation to GPS functions
         headSerialReply(0);
         break;
     case MSP_SET_PID:
         for (i = 0; i < PIDITEMS; i++)
         {
-            cfg.P8[i] = read8();
+            cfg.P8[i] = constrain_int(read8(), 1, 200); // Ensure at least 1 to prevent div by zero in pid controller
             cfg.I8[i] = read8();
             cfg.D8[i] = read8();
         }
-        cfg.P8[PIDROLL]  = max(cfg.P8[PIDROLL], 1);   // Prevent div by zero in pid controller
-        cfg.P8[PIDPITCH] = max(cfg.P8[PIDPITCH], 1);  // Prevent div by zero in pid controller
         headSerialReply(0);
         break;
     case MSP_SET_BOX:
@@ -178,19 +176,19 @@ static void evaluateCommand(void)
         {
             tmpu32 = 0;
             if (cfg.rc_auxch > 4) tmpu32 = read32();
-            else tmpu32 = read16();
+            else                  tmpu32 = read16();
             cfg.activate[i] = tmpu32;
         }
         headSerialReply(0);
         break;
     case MSP_SET_RC_TUNING:
-        cfg.rcRate8 = read8();
-        cfg.rcExpo8 = read8();
+        cfg.rcRate8       = read8();
+        cfg.rcExpo8       = read8();
         cfg.rollPitchRate = read8();
-        cfg.yawRate = read8();
-        cfg.dynThrPID = read8();
-        cfg.thrMid8 = read8();
-        cfg.thrExpo8 = read8();
+        cfg.yawRate       = read8();
+        cfg.dynThrPID     = read8();
+        cfg.thrMid8       = read8();
+        cfg.thrExpo8      = read8();
         headSerialReply(0);
         break;
     case MSP_SET_MISC:
@@ -263,7 +261,7 @@ static void evaluateCommand(void)
         serialize32(Real_GPS_coord[LAT]);
         serialize32(Real_GPS_coord[LON]);
         serialize16(GPS_altitude);
-        serialize16(GPS_speed);
+        serialize16(GPS_speed_raw);
         break;
     case MSP_COMP_GPS:
         headSerialReply(5);
@@ -335,14 +333,14 @@ static void evaluateCommand(void)
         break;
     case MSP_MISC:
         headSerialReply(2);
-        serialize16(0); // intPowerTrigger1
+        serialize16(0);                      // intPowerTrigger1
         break;
     case MSP_MOTOR_PINS:
         headSerialReply(8);
         for (i = 0; i < 8; i++) serialize8(i + 1);
         break;
     case MSP_WP:
-        wp_no = read8();    // get the wp number
+        wp_no = read8();                     // get the wp number
         headSerialReply(12);
         if (wp_no == 0)
         {

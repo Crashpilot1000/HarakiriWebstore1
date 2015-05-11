@@ -64,7 +64,8 @@ int32_t  GPS_WP[2];                                                  // Currentl
 volatile uint8_t  GPS_numSat;
 uint32_t GPS_distanceToHome;                                         // distance to home
 int32_t  GPS_directionToHome;                                        // direction to home or hol point in degrees
-uint16_t GPS_speed;                                                  // speed in cm/s
+uint16_t GPS_speed_raw;                                              // speed in cm/s
+uint16_t GPS_speed_avg;                                              // speed in cm/s averaged by moving avg with 6 elements
 volatile uint16_t GPS_altitude;                                      // altitude in m
 uint8_t  GPS_update = 0;                                             // it's a binary toogle to distinct a GPS position update
 float    GPS_angle[2] = {0, 0};                                      // it's the angles that must be applied for GPS correction
@@ -91,6 +92,7 @@ bool     BlockGPSAngles;
 bool     BlockThrottle;                                              // Sets cfg.rc_mid
 bool     BlockPitch;                                                 // Sets cfg.rc_mid
 bool     BlockRoll;                                                  // Sets cfg.rc_mid
+float    StickGPSProp;                                               // 1.0f = no override, 0.0f = maximal override
 
 // **********************
 // Battery monitoring
@@ -405,8 +407,9 @@ void loop(void)
             {
                 if (cfg.rc_dbgps)                                               // Do some additional deadband for GPS, if needed
                 {
-                    rcCommand[PITCH] = RCDeadband(rcCommand[PITCH], cfg.rc_dbgps);
-                    rcCommand[ROLL]  = RCDeadband(rcCommand[ROLL],  cfg.rc_dbgps);
+                    int32_t gpsrcptch = RCDeadband(rcCommand[PITCH], cfg.rc_dbgps);
+                    int32_t gpsrcrll  = RCDeadband(rcCommand[ROLL],  cfg.rc_dbgps);
+                    StickGPSProp      = 1.0f - ((float)min(max(abs_int(gpsrcptch), abs_int(gpsrcrll)), 400) / 400.0f); // 1.0f = no override, 0.0f = maximal override
                 }
                 rcOptions[BOXHORIZON]  = 0;
                 rcOptions[BOXANGLE]    = 1;
@@ -760,7 +763,7 @@ void loop(void)
                         Last_GPS_angle[axis] = GPS_angle[axis];
                         tmp0flt              = GPS_angle[axis] / (float)maxbank10;
                         tmp0flt              = constrain_flt(tmp0flt, -1.0f, 1.0f); // Put in range of -1 +1
-                        GPS_angle[axis]      = SpecialIntegerRoundUp((tmp0flt * (1.0f - GPSEXPO) + tmp0flt * tmp0flt * tmp0flt * GPSEXPO) * (float)maxbank10); // Do expo here, and some rounding and jitter cutoff
+                        GPS_angle[axis]      = SpecialIntegerRoundUp(((tmp0flt * (1.0f - GPSEXPO) + tmp0flt * tmp0flt * tmp0flt * GPSEXPO) * (float)maxbank10) * StickGPSProp); // Do expo here, and some rounding and jitter cutoff
                     }
                     else
                     {

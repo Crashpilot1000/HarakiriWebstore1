@@ -4,18 +4,18 @@
 uint8_t useServo = 0;
 int16_t motor[MAX_MOTORS];
 int16_t servo[8] = { 1500, 1500, 1500, 1500, 1500, 1500, 1500, 1500 };
-static motorMixerflt_t currentMixer[MAX_MOTORS];
+static motMixerUsage_t currentMixer[MAX_MOTORS];
 
 // throttle * MixerMultiply, roll * MixerMultiply, pitch * MixerMultiply, yaw * MixerMultiply
 // "float" limit -1.99f - +1.99f
-static const motorMixer16_t mixerTri[] =
+static const motMixerStorage_t mixerTri[] =
 {
     { 1.0f * MixerMultiply,  0.0f * MixerMultiply,  1.333333f * MixerMultiply,  0.0f * MixerMultiply },     // REAR
     { 1.0f * MixerMultiply, -1.0f * MixerMultiply, -0.666667f * MixerMultiply,  0.0f * MixerMultiply },     // RIGHT
     { 1.0f * MixerMultiply,  1.0f * MixerMultiply, -0.666667f * MixerMultiply,  0.0f * MixerMultiply },     // LEFT
 };
 
-static const motorMixer16_t mixerQuadP[] =
+static const motMixerStorage_t mixerQuadP[] =
 {
     { 1.0f * MixerMultiply,  0.0f * MixerMultiply,  1.0f * MixerMultiply, -1.0f * MixerMultiply },          // REAR
     { 1.0f * MixerMultiply, -1.0f * MixerMultiply,  0.0f * MixerMultiply,  1.0f * MixerMultiply },          // RIGHT
@@ -23,7 +23,7 @@ static const motorMixer16_t mixerQuadP[] =
     { 1.0f * MixerMultiply,  0.0f * MixerMultiply, -1.0f * MixerMultiply, -1.0f * MixerMultiply },          // FRONT
 };
 
-static const motorMixer16_t mixerQuadX[] =
+static const motMixerStorage_t mixerQuadX[] =
 {
     { 1.0f * MixerMultiply, -1.0f * MixerMultiply,  1.0f * MixerMultiply, -1.0f * MixerMultiply },          // REAR_R
     { 1.0f * MixerMultiply, -1.0f * MixerMultiply, -1.0f * MixerMultiply,  1.0f * MixerMultiply },          // FRONT_R
@@ -31,13 +31,13 @@ static const motorMixer16_t mixerQuadX[] =
     { 1.0f * MixerMultiply,  1.0f * MixerMultiply, -1.0f * MixerMultiply, -1.0f * MixerMultiply },          // FRONT_L
 };
 
-static const motorMixer16_t mixerBi[] =
+static const motMixerStorage_t mixerBi[] =
 {
     { 1.0f * MixerMultiply,  1.0f * MixerMultiply,  0.0f * MixerMultiply,  0.0f * MixerMultiply },          // LEFT
     { 1.0f * MixerMultiply, -1.0f * MixerMultiply,  0.0f * MixerMultiply,  0.0f * MixerMultiply },          // RIGHT
 };
 
-static const motorMixer16_t mixerY6[] =
+static const motMixerStorage_t mixerY6[] =
 {
     { 1.0f * MixerMultiply,  0.0f * MixerMultiply,  1.333333f * MixerMultiply,  1.0f * MixerMultiply },     // REAR
     { 1.0f * MixerMultiply, -1.0f * MixerMultiply, -0.666667f * MixerMultiply, -1.0f * MixerMultiply },     // RIGHT
@@ -47,7 +47,7 @@ static const motorMixer16_t mixerY6[] =
     { 1.0f * MixerMultiply,  1.0f * MixerMultiply, -0.666667f * MixerMultiply,  1.0f * MixerMultiply },     // UNDER_LEFT
 };
 
-static const motorMixer16_t mixerHex6P[] =
+static const motMixerStorage_t mixerHex6P[] =
 {
     { 1.0f * MixerMultiply, -0.866025f * MixerMultiply,  0.5f * MixerMultiply,  1.0f * MixerMultiply },     // REAR_R
     { 1.0f * MixerMultiply, -0.866025f * MixerMultiply, -0.5f * MixerMultiply, -1.0f * MixerMultiply },     // FRONT_R
@@ -57,7 +57,7 @@ static const motorMixer16_t mixerHex6P[] =
     { 1.0f * MixerMultiply,  0.0f      * MixerMultiply,  1.0f * MixerMultiply, -1.0f * MixerMultiply },     // REAR
 };
 
-static const motorMixer16_t mixerY4[] =
+static const motMixerStorage_t mixerY4[] =
 {
     { 1.0f * MixerMultiply,  0.0f * MixerMultiply,  1.0f * MixerMultiply, -1.0f * MixerMultiply },          // REAR_TOP CW
     { 1.0f * MixerMultiply, -1.0f * MixerMultiply, -1.0f * MixerMultiply,  0.0f * MixerMultiply },          // FRONT_R CCW
@@ -65,7 +65,7 @@ static const motorMixer16_t mixerY4[] =
     { 1.0f * MixerMultiply,  1.0f * MixerMultiply, -1.0f * MixerMultiply,  0.0f * MixerMultiply },          // FRONT_L CW
 };
 
-static const motorMixer16_t mixerHex6X[] =
+static const motMixerStorage_t mixerHex6X[] =
 {
     { 1.0f * MixerMultiply, -0.5f * MixerMultiply,  0.866025f * MixerMultiply,  1.0f * MixerMultiply },     // REAR_R
     { 1.0f * MixerMultiply, -0.5f * MixerMultiply, -0.866025f * MixerMultiply,  1.0f * MixerMultiply },     // FRONT_R
@@ -75,7 +75,7 @@ static const motorMixer16_t mixerHex6X[] =
     { 1.0f * MixerMultiply,  1.0f * MixerMultiply,  0.0f      * MixerMultiply,  1.0f * MixerMultiply },     // LEFT
 };
 
-static const motorMixer16_t mixerHex6H[] =
+static const motMixerStorage_t mixerHex6H[] =
 {
     { 1.0f * MixerMultiply, -1.0f * MixerMultiply,  1.0f * MixerMultiply, -1.0f * MixerMultiply },          // REAR_R
     { 1.0f * MixerMultiply, -1.0f * MixerMultiply, -1.0f * MixerMultiply,  1.0f * MixerMultiply },          // FRONT_R
@@ -85,7 +85,7 @@ static const motorMixer16_t mixerHex6H[] =
     { 1.0f * MixerMultiply,  0.0f * MixerMultiply,  0.0f * MixerMultiply,  0.0f * MixerMultiply },          // LEFT
 };
 
-static const motorMixer16_t mixerOctoX8[] =
+static const motMixerStorage_t mixerOctoX8[] =
 {
     { 1.0f * MixerMultiply, -1.0f * MixerMultiply,  1.0f * MixerMultiply, -1.0f * MixerMultiply },          // REAR_R
     { 1.0f * MixerMultiply, -1.0f * MixerMultiply, -1.0f * MixerMultiply,  1.0f * MixerMultiply },          // FRONT_R
@@ -97,7 +97,7 @@ static const motorMixer16_t mixerOctoX8[] =
     { 1.0f * MixerMultiply,  1.0f * MixerMultiply, -1.0f * MixerMultiply,  1.0f * MixerMultiply },          // UNDER_FRONT_L
 };
 
-static const motorMixer16_t mixerOctoFlatP[] =
+static const motMixerStorage_t mixerOctoFlatP[] =
 {
     { 1.0f * MixerMultiply,  0.707107f * MixerMultiply, -0.707107f * MixerMultiply,  1.0f * MixerMultiply },// FRONT_L
     { 1.0f * MixerMultiply, -0.707107f * MixerMultiply, -0.707107f * MixerMultiply,  1.0f * MixerMultiply },// FRONT_R
@@ -109,7 +109,7 @@ static const motorMixer16_t mixerOctoFlatP[] =
     { 1.0f * MixerMultiply,  1.0f      * MixerMultiply,  0.0f      * MixerMultiply, -1.0f * MixerMultiply },// LEFT
 };
 
-static const motorMixer16_t mixerOctoFlatX[] =
+static const motMixerStorage_t mixerOctoFlatX[] =
 {
     { 1.0f * MixerMultiply,  1.0f * MixerMultiply, -0.5f * MixerMultiply,  1.0f * MixerMultiply },          // MIDFRONT_L
     { 1.0f * MixerMultiply, -0.5f * MixerMultiply, -1.0f * MixerMultiply,  1.0f * MixerMultiply },          // FRONT_R
@@ -121,7 +121,7 @@ static const motorMixer16_t mixerOctoFlatX[] =
     { 1.0f * MixerMultiply,  1.0f * MixerMultiply,  0.5f * MixerMultiply, -1.0f * MixerMultiply },          // MIDREAR_L
 };
 
-static const motorMixer16_t mixerVtail4[] =
+static const motMixerStorage_t mixerVtail4[] =
 {
     { 1.0f * MixerMultiply,  0.0f * MixerMultiply,  1.0f * MixerMultiply,  1.0f * MixerMultiply },          // REAR_R
     { 1.0f * MixerMultiply, -1.0f * MixerMultiply, -1.0f * MixerMultiply,  0.0f * MixerMultiply },          // FRONT_R
