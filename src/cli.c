@@ -47,7 +47,6 @@ static void cliWpflush(char *cmdline);
 // serial LCD
 static void LCDinit(void);
 static void LCDclear(void);
-static void LCDline1(void);
 static void LCDline2(void);
 
 // OLED-Display
@@ -354,23 +353,20 @@ const clivalue_t valueTable[] =
 
 static char *i2a(unsigned i, char *a, unsigned r)
 {
-    if (i / r > 0)
-        a = i2a(i / r, a, r);
+    if (i / r > 0) a = i2a(i / r, a, r);
     *a = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ"[i % r];
     return a + 1;
 }
 
 char *itoa(int i, char *a, int r)
 {
-    if ((r < 2) || (r > 36))
-        r = 10;
+    if ((r < 2) || (r > 36)) r = 10;
     if (i < 0)
     {
         *a = '-';
         *i2a(-(unsigned)i, a + 1, r) = 0;
     }
-    else
-        *i2a(i, a, r) = 0;
+    else *i2a(i, a, r) = 0;
     return a;
 }
 
@@ -715,9 +711,9 @@ static void cliCMix(char *cmdline)
 
 static void cliDefault(char *cmdline)
 {
-    uartPrint("Resetting to defaults...\r\n");
+    uartPrint("Resetting to defaults\r\n");
     checkFirstTime(true);
-    uartPrint("Rebooting...");
+    uartPrint("Rebooting");
     systemReset(false);
 }
 
@@ -775,7 +771,7 @@ static void cliFeature(char *cmdline)
         {
             if (featureNames[i] == NULL)
             {
-                uartPrint("Invalid feature name\r\n");
+                cliErrorMessage();                                      // uartPrint("Invalid feature name\r\n");
                 break;
             }
             if (strncasecmp(cmdline, featureNames[i], len) == 0)
@@ -929,16 +925,16 @@ static bool cliSetVar(const clivalue_t *var, int32_t intvalue, float fltvalue)
     switch (var->type)
     {
     case VAR_UINT8:                                                     // Note: The value range must be set correctly in the list so it doesn't overflow the datatype
-        *(uint8_t *)var->ptr = (uint8_t)intvalue;
+        *(uint8_t *)var->ptr  = (uint8_t)intvalue;
         break;
     case VAR_INT8:
-        *(int8_t *)var->ptr = (int8_t)intvalue;
+        *(int8_t *)var->ptr   = (int8_t)intvalue;
         break;
     case VAR_UINT16:
         *(uint16_t *)var->ptr = (uint16_t)intvalue;
         break;
     case VAR_INT16:
-        *(int16_t *)var->ptr = (int16_t)intvalue;
+        *(int16_t *)var->ptr  = (int16_t)intvalue;
         break;
     case VAR_UINT32:
         *(uint32_t *)var->ptr = (uint32_t)intvalue;
@@ -1130,22 +1126,39 @@ static void cliVersion(char *cmdline)
     uartPrint(FIRMWARE);
 }
 
+// LCD functions
+// Were designed to work with serial Sparkfun LCD-09395. Since it has only unidirectional communication the initialization
+// can fail when the module is confused with other serial data from telemetry. The user can issue a re-initialization by
+// putting Throttle and Pitch stick to maximum. An stick commands oversight is included in the HarakiriREADME folder.
+// "Johannes" ported the I2C Oled functions from multiwii. Together with cGiesen the Oled compatibility was improved.
+// See: http://www.fpv-treff.de/viewtopic.php?f=18&t=2346
+// The printf.c has been altered for oled support and the I2C initialization autodetects I2C adr. in drv_system.c.
+// Considerations: I2C on stm is 3,3V. All sensors are on that I2C line. IMHO you better stick to the serial one..
+// Limitations of the LCD function:
+// - valueTable must contain elements.
+// - first element of valueTable will be displayed even if lcd parameter is set to 0
 void serialOSD(void)
 {
-#define LCDdelay 12
 #define RcEndpoint 50
-    uint8_t   input, lastinput = 0, brake = 0, brakeval = 0, speeduptimer = 0, exitLCD = 0;
-    uint16_t  DatasetNr = 0;
+#define RcMax cfg.rc_maxchk - RcEndpoint
+#define RcMin cfg.rc_minchk + RcEndpoint
+  
+    uint8_t   input, lastinput, brake, brakeval, speeduptimer, exitLCD;
+    uint16_t  DatasetNr;
     const clivalue_t *tablePtr;
+RestartLCD:                                                             // c++ doesn't like that very much
+    input = 0, lastinput = 0, brake = 0, brakeval = 0, speeduptimer = 0, exitLCD = 0, DatasetNr = 0; // Preset values
     tablePtr = &valueTable[DatasetNr];
     LCDinit();
     printf(FIRMWAREFORLCD);                                             // Defined in mw.h
     LCDline2();
     printf("LCD Interface");
-    delay(2000);
+    while (input != 1)
+    {
+        if (DoGetRc50HzTimer() && rcData[PITCH] < RcMax && rcData[THROTTLE] < RcMin) input = 1; // Wait for Pitch to move back and Thr down when coming from restart
+    }
     LCDclear();
-    LCDline1();
-    printf("%s", tablePtr->name);                                       // Display first item anyway (even if lcd ==0) no need for special attention
+    printf("%s", tablePtr->name);                                       // Display first item anyway (even if lcd == 0) no need for special attention
     LCDline2();
     cliPrintVar(tablePtr, 0);
     while (!exitLCD)
@@ -1154,19 +1167,22 @@ void serialOSD(void)
         {
             LED1_TOGGLE
             LED0_TOGGLE
-            if (rcData[THROTTLE] < (cfg.rc_minchk + RcEndpoint) && rcData[PITCH] > (cfg.rc_maxchk - RcEndpoint))
+            if (rcData[THROTTLE] < RcMin && rcData[PITCH] > RcMax)
             {
-                if (rcData[YAW] > (cfg.rc_maxchk - RcEndpoint)) exitLCD = 1; // Quit don't save
-                if (rcData[YAW] < (cfg.rc_minchk + RcEndpoint)) exitLCD = 2; // Quit and save
+                if (rcData[YAW] > RcMax) exitLCD = 1;                   // Quit don't save
+                if (rcData[YAW] < RcMin) exitLCD = 2;                   // Quit and save
             }
-
+            
+            if (rcData[THROTTLE] > RcMax && rcData[PITCH] > RcMax)      // Serial Lcd can be confused by telemtry data
+            goto RestartLCD;                                            // So user can force re-initialization
+            
             input = 0;
             if (!exitLCD)
             {
-                if (rcData[PITCH] < (cfg.rc_minchk + RcEndpoint)) input = 1;
-                if (rcData[PITCH] > (cfg.rc_maxchk - RcEndpoint)) input = 2;
-                if (rcData[ROLL]  < (cfg.rc_minchk + RcEndpoint)) input = 3;
-                if (rcData[ROLL]  > (cfg.rc_maxchk - RcEndpoint)) input = 4;
+                if (rcData[PITCH] < RcMin) input = 1;
+                if (rcData[PITCH] > RcMax) input = 2;
+                if (rcData[ROLL]  < RcMin) input = 3;
+                if (rcData[ROLL]  > RcMax) input = 4;
             }
 
             if (lastinput == input)                                     // Adjust Inputspeed
@@ -1236,7 +1252,7 @@ void serialOSD(void)
     }
     delay(500);
     LCDclear();
-    printf(" Exit & Reboot ");
+    printf(" Rebooting and ");
     LCDline2();
     switch (exitLCD)
     {
@@ -1244,11 +1260,11 @@ void serialOSD(void)
         printf(" NOT Saving");
         break;
     case 2:
-        printf(".!.!.Saving.!.!.");
+        printf("!!!!!Saving!!!!!");
         writeParams(0);
         break;
     }
-    delay(800);
+    delay(1500);
     LCDoff();                                                           // Reset coming from LCD so reset it.
     systemReset(false);
 }
@@ -1280,44 +1296,27 @@ static void changeval(const clivalue_t *var, const int8_t adder)
     cliSetVar(var, value, valuef);
 }
 
-/*
-static void changeval(const clivalue_t *var, const int8_t adder)
+// Codes for Sparkfun LCD-09395
+#define CommandCharFE  0xFE                                             // Prefix for most commands
+#define CommandChar7C  0x7C                                             // Prefix for Brightness command
+#define FullBright     0x9D                                             // Brightness Range: 0x80 - 0x9D
+#define DisplayON      0x0C
+#define DisplayOFF     0x08
+#define ClearScr       0x01
+#define CursorLine1    0x80
+#define CursorLine2    0xC0
+#define LCDdelay         12                                             // 12ms Delay between commands
+
+static void SendSerialLCD(uint8_t val)
 {
-    int32_t value, maximum, minimum;
-    float   valuef;
-
-    maximum = var->max;
-    minimum = var->min;
-    switch (var->type)
-    {
-    case VAR_UINT8:
-    case VAR_INT8:
-        value = *(char *)var->ptr;
-        value = constrain_int(value + adder, minimum, maximum);
-        *(char *)var->ptr = (char)value;
-        break;
-
-    case VAR_UINT16:
-    case VAR_INT16:
-        value = *(short *)var->ptr;
-        value = constrain_int(value + adder, minimum, maximum);
-        *(short *)var->ptr = (short)value;
-        break;
-
-    case VAR_UINT32:
-        value = *(int *)var->ptr;
-        value = constrain_int(value + adder, minimum, maximum);
-        *(int *)var->ptr = (int)value;
-        break;
-
-    case VAR_FLOAT:
-        *(float *)&valuef = *(float *)var->ptr;
-        valuef = constrain_flt(valuef + (float)adder/1000.0f, minimum, maximum);
-        *(float *)var->ptr = *(float *)&valuef;
-        break;
-    }
+    delay(LCDdelay);
+    uartWrite(val);
 }
-*/
+static void SendSerialLCDCmdFE(uint8_t val)
+{
+    SendSerialLCD(CommandCharFE);
+    SendSerialLCD(val);
+}  
 
 static void LCDinit(void)                                               // changed Johannes
 {
@@ -1325,54 +1324,32 @@ static void LCDinit(void)                                               // chang
     {
         serialInit(9600);                                               // INIT LCD HERE
         LCDoff();
-        uartWrite(0xFE);
-        delay(LCDdelay);
-        uartWrite(0x0C);                                                // Display ON
-        delay(LCDdelay);
-        uartWrite(0x7C);
-        delay(LCDdelay);
-        uartWrite(0x9D);                                                // 100% Brightness
-        LCDclear();      
+        SendSerialLCD(CommandChar7C);
+        SendSerialLCD(FullBright);
+        LCDclear();
+        SendSerialLCDCmdFE(DisplayON);
     }
 }
 
 void LCDoff(void)
 {
     if (i2cLCD) i2c_clear_OLED();                                       // Johannes
-    else
-    {
-        delay(LCDdelay);
-        uartWrite(0xFE);
-        delay(LCDdelay);
-        uartWrite(0x08);                                                // LCD Display OFF
-        delay(LCDdelay);
-    }
+    else SendSerialLCDCmdFE(DisplayOFF);
 }
 
 static void LCDclear(void)                                              // clear screen, cursor line 1, pos 0
 {
-    if (i2cLCD) i2c_clear_OLED();                                       // Johannes
+    if (i2cLCD)
+    {
+        i2c_clear_OLED();                                               // Johannes
+        i2c_clr_line(7);
+    }
     else
     {
-        delay(LCDdelay);
-        uartWrite(0xFE);
-        delay(LCDdelay);
-        uartWrite(0x01);                                                // Clear
+        SendSerialLCDCmdFE(ClearScr);
+        SendSerialLCDCmdFE(CursorLine1);
     }
-    LCDline1();
-}
-
-static void LCDline1(void)                                              // Sets LCD Cursor to line 1 pos 0
-{
-    if (i2cLCD) i2c_clr_line(7);                                        // Johannes
-    else
-    {
-        delay(LCDdelay);
-        uartWrite(0xFE);
-        delay(LCDdelay);
-        uartWrite(0x80);                                                // Line #1 pos 0
-        delay(LCDdelay);
-    }
+    delay(LCDdelay);
 }
 
 static void LCDline2(void)                                              // Sets LCD Cursor to line 2 pos 0
@@ -1380,18 +1357,12 @@ static void LCDline2(void)                                              // Sets 
     if (i2cLCD) i2c_clr_line(8);                                        // Johannes
     else
     {
+        SendSerialLCDCmdFE(CursorLine2);
         delay(LCDdelay);
-        uartWrite(0xFE);
-        delay(LCDdelay);
-        uartWrite(0xC0);                                                // Line #2
-        delay(LCDdelay);
-        printf("               ");                                      // Clear Line #2
-        delay(LCDdelay);
-        uartWrite(0xFE);
-        delay(LCDdelay);
-        uartWrite(0xC0);                                                // Line #2
-        delay(LCDdelay);
+        printf("               ");                                      // Clear Line
+        SendSerialLCDCmdFE(CursorLine2);                                // Cursor moved, reset it.
     }
+    delay(LCDdelay);    
 }
 
 void cliProcess(void)
