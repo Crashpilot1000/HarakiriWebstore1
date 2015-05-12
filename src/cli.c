@@ -921,7 +921,7 @@ static bool cliSetVar(const clivalue_t *var, int32_t intvalue, float fltvalue)
     if(var->type == VAR_FLOAT) inrange = fltvalue >= (float)var->min   && fltvalue <= (float)var->max;
     else                       inrange = intvalue >= (int32_t)var->min && intvalue <= var->max;
 
-    if (!inrange)return false;
+    if (!inrange) return false;
     switch (var->type)
     {
     case VAR_UINT8:                                                     // Note: The value range must be set correctly in the list so it doesn't overflow the datatype
@@ -1135,7 +1135,7 @@ static void cliVersion(char *cmdline)
 // The printf.c has been altered for oled support and the I2C initialization autodetects I2C adr. in drv_system.c.
 // Considerations: I2C on stm is 3,3V. All sensors are on that I2C line. IMHO you better stick to the serial one..
 // Limitations of the LCD function:
-// - valueTable must contain elements.
+// - valueTable must contain elements with lcd set.
 // - first element of valueTable will be displayed even if lcd parameter is set to 0
 void serialOSD(void)
 {
@@ -1179,10 +1179,10 @@ RestartLCD:                                                             // c++ d
             input = 0;
             if (!exitLCD)
             {
-                if (rcData[PITCH] < RcMin) input = 1;
-                if (rcData[PITCH] > RcMax) input = 2;
-                if (rcData[ROLL]  < RcMin) input = 3;
-                if (rcData[ROLL]  > RcMax) input = 4;
+                if (rcData[PITCH] < RcMin)      input = 1;              // Pitch wins over Roll here
+                else if (rcData[PITCH] > RcMax) input = 2;
+                else if (rcData[ROLL]  < RcMin) input = 4;
+                else if (rcData[ROLL]  > RcMax) input = 8;
             }
 
             if (lastinput == input)                                     // Adjust Inputspeed
@@ -1205,48 +1205,43 @@ RestartLCD:                                                             // c++ d
             if (brake >= brakeval) brake = 0;
             else input = 0;
 
-            switch (input)
+            if (input)
             {
-            case 0:
-                break;
-            case 1:                                                     // Down
-                do                                                      // Search for next Dataset
+                if (input & 3)                                          // Pitch
                 {
-                    DatasetNr++;
-                    if (DatasetNr == VALUE_COUNT) DatasetNr = 0;
+                    do                                                  // Search for next Dataset
+                    {
+                        if (input & 1)                                  // Pitch stick lo
+                        {
+                            DatasetNr++;
+                            if (DatasetNr == VALUE_COUNT) DatasetNr = 0;
+                        }
+                        else                                            // Pitch stick hi
+                        {
+                            if (!DatasetNr) DatasetNr = VALUE_COUNT;
+                            DatasetNr--;
+                        }
+                        tablePtr = &valueTable[DatasetNr];
+                    }
+                    while (!tablePtr->lcd);
+                    LCDclear();
+                    printf("%s", tablePtr->name);
                 }
-                while (!valueTable[DatasetNr].lcd);
-                tablePtr = &valueTable[DatasetNr];
-                LCDclear();
-                printf("%s", tablePtr->name);
-                LCDline2();
-                cliPrintVar(tablePtr, 0);
-                break;
-            case 2:                                                     // UP
-                do                                                      // Search for next Dataset
+                else                                                    // Roll
                 {
-                    if (!DatasetNr) DatasetNr = VALUE_COUNT;
-                    DatasetNr--;
+                    if (input & 4)                                      // Roll left
+                    {
+                        if (brakeval != 8) changeval(tablePtr, -1);     // Substract within the limit
+                        else changeval(tablePtr, -5);
+                    }
+                    else                                                // Roll right
+                    {
+                        if (brakeval != 8) changeval(tablePtr, 1);      // Add within the limit
+                        else changeval(tablePtr, 5);
+                    }
                 }
-                while (!valueTable[DatasetNr].lcd);
-                tablePtr = &valueTable[DatasetNr];
-                LCDclear();
-                printf("%s", tablePtr->name);
                 LCDline2();
                 cliPrintVar(tablePtr, 0);
-                break;
-            case 3:                                                     // LEFT
-                if (brakeval != 8) changeval(tablePtr, -1);             // Substract within the limit
-                else changeval(tablePtr, -5);
-                LCDline2();
-                cliPrintVar(tablePtr, 0);
-                break;
-            case 4:                                                     // RIGHT
-                if (brakeval != 8) changeval(tablePtr, 1);              // Add within the limit
-                else changeval(tablePtr, 5);
-                LCDline2();
-                cliPrintVar(tablePtr, 0);
-                break;
             }
         }                                                               // End of 50Hz Loop
     }
@@ -1711,10 +1706,10 @@ static void cliRecal(void)
 bool baseflight_mavlink_send_paramlist(bool Reset)
 {
     static  int16_t i = 0;
-    uint8_t StrLength;
     float   value = 0;
     char    buf[17];                                    // Always send 16 chars reserve one zero byte
     mavlink_message_t msg;
+    const   clivalue_t *tableptr;
 
     if(Reset)
     {
@@ -1725,27 +1720,27 @@ bool baseflight_mavlink_send_paramlist(bool Reset)
     AllowProtocolAutosense = false;                     // Block Autodetect during transmission
     if(i < 0 || i > (VALUE_COUNT - 1)) return true;     // Done with error but DONE
     memset (buf, 0, 17);                                // Fill with 0 For Stringtermination
-    StrLength = min(strlen(valueTable[i].name), 16);    // Copy max 16 Bytes
-    memcpy (buf, valueTable[i].name, StrLength);
-    switch(valueTable[i].type)
+    tableptr = &valueTable[i];
+    memcpy (buf, tableptr->name, min(strlen(tableptr->name), 16)); // Copy max 16 Bytes
+    switch(tableptr->type)
     {
     case VAR_UINT8:
-        value = *(uint8_t *)valueTable[i].ptr;
+        value = *(uint8_t *)tableptr->ptr;
         break;
     case VAR_INT8:
-        value = *(int8_t *)valueTable[i].ptr;
+        value = *(int8_t *)tableptr->ptr;
         break;
     case VAR_UINT16:
-        value = *(uint16_t *)valueTable[i].ptr;
+        value = *(uint16_t *)tableptr->ptr;
         break;
     case VAR_INT16:
-        value = *(int16_t *)valueTable[i].ptr;
+        value = *(int16_t *)tableptr->ptr;
         break;
     case VAR_UINT32:
-        value = *(uint32_t *)valueTable[i].ptr;
+        value = *(uint32_t *)tableptr->ptr;
         break;
     case VAR_FLOAT:
-        value = *(float *)valueTable[i].ptr;
+        value = *(float *)tableptr->ptr;
         break;
     }
     mavlink_msg_param_value_pack(MLSystemID, MLComponentID, &msg, buf, value, MAVLINK_TYPE_FLOAT, VALUE_COUNT, i);
