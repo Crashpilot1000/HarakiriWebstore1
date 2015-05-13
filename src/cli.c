@@ -40,7 +40,6 @@ static void cliPassgps(char *cmdline);
 static void cliFlash(char *cmdline);
 static void cliErrorMessage(void);
 static void cliRecal(void);
-static void changeval(const clivalue_t *var, const int8_t adder);
 static void cliPrintVar(const clivalue_t *var, uint32_t full);
 static void cliWpflush(char *cmdline);
 
@@ -48,6 +47,7 @@ static void cliWpflush(char *cmdline);
 static void LCDinit(void);
 static void LCDclear(void);
 static void LCDline2(void);
+static void LCDchangeval(const clivalue_t *var, const int8_t adder);
 
 // OLED-Display
 extern bool i2cLCD;                         // true, if an OLED-Display is connected
@@ -1134,8 +1134,9 @@ static void cliVersion(char *cmdline)
 // See: http://www.fpv-treff.de/viewtopic.php?f=18&t=2346
 // The printf.c has been altered for oled support and the I2C initialization autodetects I2C adr. in drv_system.c.
 // Considerations: I2C on stm is 3,3V. All sensors are on that I2C line. IMHO you better stick to the serial one..
+// The LCD now remembers the Dataset on EEPROM save, so you don't have to scroll through the list to find that parameter again
+// you are currently working on.
 // Limitations of the LCD function:
-// - valueTable must contain elements with lcd set.
 // - first element of valueTable will be displayed even if lcd parameter is set to 0
 void serialOSD(void)
 {
@@ -1143,24 +1144,32 @@ void serialOSD(void)
 #define RcMax cfg.rc_maxchk - RcEndpoint
 #define RcMin cfg.rc_minchk + RcEndpoint
   
-    uint8_t   input, lastinput, brake, brakeval, speeduptimer, exitLCD;
-    uint16_t  DatasetNr;
+    uint8_t  input, lastinput, brake, brakeval, speeduptimer, exitLCD;
+    int8_t   adder;
+    uint16_t i, k;
     const clivalue_t *tablePtr;
+
 RestartLCD:                                                             // c++ doesn't like that very much
-    input = 0, lastinput = 0, brake = 0, brakeval = 0, speeduptimer = 0, exitLCD = 0, DatasetNr = 0; // Preset values
-    tablePtr = &valueTable[DatasetNr];
+    input = 0, lastinput = 0, brake = 0, brakeval = 0, speeduptimer = 0;// Preset values
+    cfg.LCDcurrDataset = constrain_int(cfg.LCDcurrDataset, 0,(VALUE_COUNT - 1)); // Ensure valid range in case of EEPROM fail
+    tablePtr = &valueTable[cfg.LCDcurrDataset];
     LCDinit();
     printf(FIRMWAREFORLCD);                                             // Defined in mw.h
     LCDline2();
-    printf("LCD Interface");
-    while (input != 1)
+    k = 0;
+    for (i = 0; i < VALUE_COUNT; i++) if(tablePtr->lcd) k++;            // Count parameters for LCD
+    printf("%d LCD Datasets", k);
+    while (input != 1) if (DoGetRc50HzTimer() && rcData[PITCH] < RcMax && rcData[THROTTLE] < RcMin) input = 1; // Wait for Pitch to move back and Thr down when coming from restart
+    if (k)
     {
-        if (DoGetRc50HzTimer() && rcData[PITCH] < RcMax && rcData[THROTTLE] < RcMin) input = 1; // Wait for Pitch to move back and Thr down when coming from restart
+        LCDclear();
+        printf("%s", tablePtr->name);                                   // Display first item anyway (even if lcd == 0) no need for special attention
+        LCDline2();
+        cliPrintVar(tablePtr, 0);
+        exitLCD = 0;
     }
-    LCDclear();
-    printf("%s", tablePtr->name);                                       // Display first item anyway (even if lcd == 0) no need for special attention
-    LCDline2();
-    cliPrintVar(tablePtr, 0);
+    else exitLCD = 1;                                                   // No Datasets Quit don't save     
+
     while (!exitLCD)
     {
         if (DoGetRc50HzTimer())                                         // Start of 50Hz Loop Gathers all Rc Data
@@ -1184,44 +1193,50 @@ RestartLCD:                                                             // c++ d
                 else if (rcData[ROLL]  < RcMin) input = 4;
                 else if (rcData[ROLL]  > RcMax) input = 8;
             }
-
+            
             if (lastinput == input)                                     // Adjust Inputspeed
             {
-                speeduptimer++;
-                if (speeduptimer >= 100)
+                if (speeduptimer > 100)
                 {
-                    speeduptimer = 99;
-                    brakeval     = 8;
+                    brakeval = 8;
+                    adder    = 10;
                 }
-                else brakeval = 17;
+                else
+                {
+                    brakeval = 17;
+                    adder    = 1;
+                    speeduptimer++;
+                }
             }
             else
             {
-                brakeval = 0;
+                brakeval     = 0;
+                adder        = 1;
                 speeduptimer = 0;
             }
             lastinput = input;
             brake++;
+
             if (brake >= brakeval) brake = 0;
             else input = 0;
-
+            
             if (input)
             {
                 if (input & 3)                                          // Pitch
                 {
                     do                                                  // Search for next Dataset
                     {
-                        if (input & 1)                                  // Pitch stick lo
+                        if (input == 1)                                 // Pitch stick lo, next dataset
                         {
-                            DatasetNr++;
-                            if (DatasetNr == VALUE_COUNT) DatasetNr = 0;
+                            cfg.LCDcurrDataset++;
+                            if (cfg.LCDcurrDataset == VALUE_COUNT) cfg.LCDcurrDataset = 0;
                         }
-                        else                                            // Pitch stick hi
+                        else                                            // Pitch stick hi, previous dataset
                         {
-                            if (!DatasetNr) DatasetNr = VALUE_COUNT;
-                            DatasetNr--;
+                            if (!cfg.LCDcurrDataset) cfg.LCDcurrDataset = VALUE_COUNT;
+                            cfg.LCDcurrDataset--;
                         }
-                        tablePtr = &valueTable[DatasetNr];
+                        tablePtr = &valueTable[cfg.LCDcurrDataset];
                     }
                     while (!tablePtr->lcd);
                     LCDclear();
@@ -1229,16 +1244,8 @@ RestartLCD:                                                             // c++ d
                 }
                 else                                                    // Roll
                 {
-                    if (input & 4)                                      // Roll left
-                    {
-                        if (brakeval != 8) changeval(tablePtr, -1);     // Substract within the limit
-                        else changeval(tablePtr, -5);
-                    }
-                    else                                                // Roll right
-                    {
-                        if (brakeval != 8) changeval(tablePtr, 1);      // Add within the limit
-                        else changeval(tablePtr, 5);
-                    }
+                    if (input == 4) LCDchangeval(tablePtr, -adder);     // Roll left Substract within the limit
+                    else LCDchangeval(tablePtr, adder);                 // Roll right Add within the limit
                 }
                 LCDline2();
                 cliPrintVar(tablePtr, 0);
@@ -1264,7 +1271,7 @@ RestartLCD:                                                             // c++ d
     systemReset(false);
 }
 
-static void changeval(const clivalue_t *var, const int8_t adder)
+static void LCDchangeval(const clivalue_t *var, const int8_t adder)
 {
     int32_t value  = *(uint32_t *)var->ptr;                             // Do case VAR_UINT32 here to avoid "uninitialized variable" warning in GCC
     float   valuef = *(float *)var->ptr;                                // Do case VAR_FLOAT here to avoid "uninitialized variable" warning in GCC
@@ -1354,7 +1361,7 @@ static void LCDline2(void)                                              // Sets 
     {
         SendSerialLCDCmdFE(CursorLine2);
         delay(LCDdelay);
-        printf("               ");                                      // Clear Line
+        printf("                ");                                     // Clear Line
         SendSerialLCDCmdFE(CursorLine2);                                // Cursor moved, reset it.
     }
     delay(LCDdelay);    

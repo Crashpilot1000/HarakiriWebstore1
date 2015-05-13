@@ -271,6 +271,7 @@ typedef struct config_t
     uint8_t  rollPitchRate;
     uint8_t  yawRate;
     uint8_t  dynThrPID;
+    uint16_t LCDcurrDataset;                // Points to the current dataset for LCD Display
     uint8_t  ShakyDataAvail;                // Is set to 1 when gyrodata are saved upon acc calibration as well.
     float    ShakyGyroZero[3];              // Saved together with acc calibration and will be used in places that are troublesome (boats etc.)
     float    accZero[3];
