@@ -335,39 +335,36 @@ void OLED_Status(void)
     if (OLEDDelay >= 30)
     {
         OLEDDelay = 0;
-        sprintf(line, "MAG : WARN    ",(int16_t)heading);
+        sprintf(line, "MAG : WARN    ", (int16_t)heading);
         if (cfg.mag_calibrated)
         {
-            sprintf(smag, "%4d",(int16_t)heading);
+            sprintf(smag, "%4d", (int16_t)heading);
             line[6] = smag[0];
             line[7] = smag[1];
             line[8] = smag[2];
             line[9] = smag[3];
         }
         i2c_OLED_LCDsetLine(1); i2c_OLED_LCDprintChar(line);
-        sprintf(line, "VBAT: --,-V AGL:-----");
+        sprintf(line, "VBAT: --,-V AGL: ----");
         if (FEATURE_VBAT)
         {
             line[6] = digit100(vbat);
             line[7] = digit10(vbat);
             line[9] = digit1(vbat);
         }
-        if (EstAlt < 0)
-            line[16] = '-';
-        else
-            line[16] = ' ';
-        tmp0 = (int16_t)abs_int((int32_t)EstAlt / 100);
+        if (EstAlt < 0) line[16] = '-';
+        tmp0     = (int16_t)abs_int((int32_t)EstAlt / 100);
         line[17] = digit10000(tmp0);
         line[18] = digit1000(tmp0);
         line[19] = digit100(tmp0);
         line[20] = digit10(tmp0);
         i2c_OLED_LCDsetLine(2);
         i2c_OLED_LCDprintChar(line);
-
+        
+        sprintf(line, "LAT :  .-+-.-------  ");
         if (FEATURE_GPS)
         {
-            sprintf(line, "LAT :  .-+-.-------  ");
-            line[6] = Real_GPS_coord[LAT]<0?'S':'N';
+            line[6]  = Real_GPS_coord[LAT] < 0 ? 'S' : 'N';
             line[8]  = '0' + Real_GPS_coord[LAT]  / 1000000000;
             line[9]  = '0' + Real_GPS_coord[LAT]  / 100000000 - (Real_GPS_coord[LAT] / 1000000000) * 10;
             line[10] = '0' + Real_GPS_coord[LAT]  / 10000000  - (Real_GPS_coord[LAT] / 100000000)  * 10;
@@ -378,10 +375,14 @@ void OLED_Status(void)
             line[16] = '0' + Real_GPS_coord[LAT]  / 100       - (Real_GPS_coord[LAT] / 1000)       * 10;
             line[17] = '0' + Real_GPS_coord[LAT]  / 10        - (Real_GPS_coord[LAT] / 100)        * 10;
             line[18] = '0' + Real_GPS_coord[LAT]              - (Real_GPS_coord[LAT] / 10)         * 10;
-            i2c_OLED_LCDsetLine(3);
-            i2c_OLED_LCDprintChar(line);
-            sprintf(line, "LON :  .-+-.-------  ");
-            line[6] = Real_GPS_coord[LON]<0?'W':'E';
+        }          
+        i2c_OLED_LCDsetLine(3);
+        i2c_OLED_LCDprintChar(line);
+          
+        sprintf(line, "LON :  .-+-.-------  ");
+        if (FEATURE_GPS)
+        {
+            line[6]  = Real_GPS_coord[LON] < 0 ? 'W' : 'E';
             line[8]  = '0' + Real_GPS_coord[LON]  / 1000000000;
             line[9]  = '0' + Real_GPS_coord[LON]  / 100000000 - (Real_GPS_coord[LON] / 1000000000) * 10;
             line[10] = '0' + Real_GPS_coord[LON]  / 10000000  - (Real_GPS_coord[LON] / 100000000)  * 10;
@@ -392,23 +393,13 @@ void OLED_Status(void)
             line[16] = '0' + Real_GPS_coord[LON]  / 100       - (Real_GPS_coord[LON] / 1000)       * 10;
             line[17] = '0' + Real_GPS_coord[LON]  / 10        - (Real_GPS_coord[LON] / 100)        * 10;
             line[18] = '0' + Real_GPS_coord[LON]              - (Real_GPS_coord[LON] / 10)         * 10;
-            i2c_OLED_LCDsetLine(4);
-            i2c_OLED_LCDprintChar(line);
-            sprintf(line, "SAT : %d   FIX : %d  ",GPS_numSat,GPS_FIX);
-            i2c_OLED_LCDsetLine(5);
-            i2c_OLED_LCDprintChar(line);
         }
-        else
-        {
-            sprintf(line, "LAT :  .---.-------  ");
-            i2c_OLED_LCDsetLine(3);
-            i2c_OLED_LCDprintChar(line);
-            sprintf(line, "LON :  .---.-------  ");
-            i2c_OLED_LCDsetLine(4);
-            i2c_OLED_LCDprintChar(line);
-            sprintf(line, "SAT : -    FIX : -   ");
-            i2c_OLED_LCDsetLine(5);
-            i2c_OLED_LCDprintChar(line);
-        }
+        i2c_OLED_LCDsetLine(4);
+        i2c_OLED_LCDprintChar(line);
+        
+        if (FEATURE_GPS) sprintf(line, "SAT : %d   FIX : %d  ", GPS_numSat, GPS_FIX);
+        else             sprintf(line, "SAT : -    FIX : -   ");
+        i2c_OLED_LCDsetLine(5);
+        i2c_OLED_LCDprintChar(line);
     }
 }
