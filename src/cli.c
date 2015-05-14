@@ -1157,7 +1157,7 @@ RestartLCD:                                                             // c++ d
     printf(FIRMWAREFORLCD);                                             // Defined in mw.h
     LCDline2();
     k = 0;
-    for (i = 0; i < VALUE_COUNT; i++) if(tablePtr->lcd) k++;            // Count parameters for LCD
+    for (i = 0; i < VALUE_COUNT; i++) if (tablePtr->lcd) k++;           // Count parameters for LCD
     printf("%d LCD Datasets", k);
     while (input != 1) if (DoGetRc50HzTimer() && rcData[PITCH] < RcMax && rcData[THROTTLE] < RcMin) input = 1; // Wait for Pitch to move back and Thr down when coming from restart
     if (k)
@@ -1300,11 +1300,11 @@ static void LCDchangeval(const clivalue_t *var, const int8_t adder)
 
 // Codes for Sparkfun LCD-09395
 #define CommandCharFE  0xFE                                             // Prefix for most commands
-#define CommandChar7C  0x7C                                             // Prefix for Brightness command
+#define CommandChar7C  0x7C                                             // Prefix for Brightness command and Baud
 #define FullBright     0x9D                                             // Brightness Range: 0x80 - 0x9D
 #define DisplayON      0x0C
 #define DisplayOFF     0x08
-#define ClearScr       0x01
+#define ClearScr       0x01                                             // Clears Line 1 and 2
 #define CursorLine1    0x80
 #define CursorLine2    0xC0
 #define LCDdelay         12                                             // 12ms Delay between commands
