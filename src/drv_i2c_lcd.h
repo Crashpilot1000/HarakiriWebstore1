@@ -11,8 +11,7 @@ bool i2c_OLED_init(void);
 bool initI2cLCD(bool cli);
 void i2cOSD(void);
 void i2c_OLED_send_char(unsigned char ascii);
-void i2c_OLED_LCDsetLine(uint8_t line);
-void OLED_Status(void); 
+void OLED_Status(void);
 
 #define SSD1306_LCDWIDTH    128
 #define SSD1306_LCDHEIGHT   64

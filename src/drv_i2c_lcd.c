@@ -11,7 +11,7 @@ extern char * const mixerNames[];    // to display the current mixer
 static uint8_t curOLED_address;      // OLED address of the currentOLED
 uint8_t OLED_Type;                   // 1, 2
 
-void i2c_OLED_set_line(uint8_t row);
+static void i2c_OLED_set_line(uint8_t row);
 
 bool i2cLCD;                         // true, if an OLED-Display is connected
 
@@ -154,32 +154,26 @@ const uint8_t myFont[][5] = {
 };
 #define FONTDATASETCOUNT (sizeof(myFont) / sizeof(myFont[0]))
 
-unsigned char digit10000(uint16_t v)
+// Input: int32_t value, digit to return (0-9)
+//static unsigned char DigitToChar(int32_t input, uint8_t stelle)
+static unsigned char DigitToChar(int32_t input, uint8_t stelle)
 {
-    return '0' + v / 10000;
+    const int32_t powtable[10] = {1, 10, 100, 1000, 10000, 100000, 1000000, 10000000, 100000000, 1000000000};
+    int32_t result = input / powtable[stelle];
+    if (stelle < 9) result -= (input / powtable[stelle + 1]) * 10;
+    return '0' + result;
 }
-
-unsigned char digit1000(uint16_t v)
+/*
+For Reference the POW-version, actually compiles to bigger file.
+static unsigned char DigitToChar(int32_t input, uint8_t stelle)
 {
-    return '0' + v / 1000 - (v / 10000) * 10;
+    int32_t result = input / (int32_t)pow(10, stelle);
+    if (stelle < 9) result -= (input / (int32_t)pow(10, stelle + 1)) * 10;
+    return '0' + result;
 }
+*/
 
-unsigned char digit100(uint16_t v)
-{
-    return '0' + v / 100 - (v / 1000) * 10;
-}
-
-unsigned char digit10(uint16_t v)
-{
-    return '0' + v / 10 - (v / 100) * 10;
-}
-
-unsigned char digit1(uint16_t v)
-{
-    return '0' + v - (v / 10) * 10;
-}
-
-void i2c_OLED_send_cmd(uint8_t command)
+static void i2c_OLED_send_cmd(uint8_t command)
 {
     uint8_t  hexval = 0;
     if(!OLED_Type) return;
@@ -187,7 +181,7 @@ void i2c_OLED_send_cmd(uint8_t command)
     i2cWrite(curOLED_address, hexval, (uint8_t)command);
 }
 
-void i2c_OLED_send_byte(uint8_t val)
+static void i2c_OLED_send_byte(uint8_t val)
 {
     if(!OLED_Type) return;
     i2cWrite(curOLED_address, 0x40, (uint8_t)val);
@@ -200,12 +194,12 @@ void i2c_OLED_send_char(unsigned char ascii)
     i2c_OLED_send_byte(0);                                      // Don't know why this is here ask the OLED-guys.
 }
 
-void i2c_OLED_LCDprint(uint8_t i)
+static void i2c_OLED_LCDprint(uint8_t i)
 {
     i2c_OLED_send_char(i);
 }
 
-void i2c_OLED_LCDprintChar(const char *s)
+static void i2c_OLED_LCDprintChar(const char *s)
 {
     while (*s) {i2c_OLED_LCDprint(*s++);}
 }
@@ -279,15 +273,17 @@ bool i2c_OLED_init(void)
     return true;
 }
 
-void i2c_OLED_set_XY(uint8_t col, uint8_t row)                  //  Not used in MW V2.0 but its here anyway!
+/*
+static void i2c_OLED_set_XY(uint8_t col, uint8_t row)           //  Not used in MW V2.0 but its here anyway!
 {
     if(!OLED_Type) return;
     i2c_OLED_send_cmd(0xb0 + row);                              // set page address
     i2c_OLED_send_cmd(0x00 + (8 * col & 0x0f));                 // set low col address
     i2c_OLED_send_cmd(0x10 + ((8 * col >> 4) & 0x0f));          // set high col address
 }
+*/
 
-void i2c_OLED_set_line(uint8_t row)                             // goto the beginning of a single row, compattible with LCD_CONFIG
+static void i2c_OLED_set_line(uint8_t row)                      // goto the beginning of a single row, compattible with LCD_CONFIG
 {
     if(!OLED_Type) return;
     i2c_OLED_send_cmd(0xb0 + row);                              // set page address
@@ -295,7 +291,7 @@ void i2c_OLED_set_line(uint8_t row)                             // goto the begi
     i2c_OLED_send_cmd(0x10);                                    // set high col address
 }
 
-void i2c_OLED_LCDsetLine(uint8_t line)                          // Line = 1 to 8
+static void i2c_OLED_LCDsetLine(uint8_t line)                   // Line = 1 to 8
 {
     if(!OLED_Type) return;
     i2c_OLED_set_line(line - 1);
@@ -328,53 +324,53 @@ void i2c_clr_line(uint8_t line)
 void OLED_Status(void)
 {
     static uint8_t OLEDDelay = 0;
-    char line[22], smag[5];
-    uint16_t tmp0;
+    char line[22];
+    int32_t tmp0;
 
     OLEDDelay++;
     if (OLEDDelay >= 30)
     {
         OLEDDelay = 0;
         sprintf(line, "MAG : WARN    ", (int16_t)heading);
+
         if (cfg.mag_calibrated)
         {
-            sprintf(smag, "%4d", (int16_t)heading);
-            line[6] = smag[0];
-            line[7] = smag[1];
-            line[8] = smag[2];
-            line[9] = smag[3];
+            line[6] = DigitToChar(heading, 3);
+            line[7] = DigitToChar(heading, 2);
+            line[8] = DigitToChar(heading, 1);
+            line[9] = DigitToChar(heading, 0);
         }
         i2c_OLED_LCDsetLine(1); i2c_OLED_LCDprintChar(line);
         sprintf(line, "VBAT: --,-V AGL: ----");
         if (FEATURE_VBAT)
         {
-            line[6] = digit100(vbat);
-            line[7] = digit10(vbat);
-            line[9] = digit1(vbat);
+            line[6] = DigitToChar(vbat, 2);
+            line[7] = DigitToChar(vbat, 1);
+            line[9] = DigitToChar(vbat, 0);
         }
         if (EstAlt < 0) line[16] = '-';
         tmp0     = (int16_t)abs_int((int32_t)EstAlt / 100);
-        line[17] = digit10000(tmp0);
-        line[18] = digit1000(tmp0);
-        line[19] = digit100(tmp0);
-        line[20] = digit10(tmp0);
+        line[17] = DigitToChar(tmp0, 3);
+        line[18] = DigitToChar(tmp0, 2);
+        line[19] = DigitToChar(tmp0, 1);
+        line[20] = DigitToChar(tmp0, 0);
         i2c_OLED_LCDsetLine(2);
         i2c_OLED_LCDprintChar(line);
-        
+
         sprintf(line, "LAT :  .-+-.-------  ");
         if (FEATURE_GPS)
         {
             line[6]  = Real_GPS_coord[LAT] < 0 ? 'S' : 'N';
-            line[8]  = '0' + Real_GPS_coord[LAT]  / 1000000000;
-            line[9]  = '0' + Real_GPS_coord[LAT]  / 100000000 - (Real_GPS_coord[LAT] / 1000000000) * 10;
-            line[10] = '0' + Real_GPS_coord[LAT]  / 10000000  - (Real_GPS_coord[LAT] / 100000000)  * 10;
-            line[12] = '0' + Real_GPS_coord[LAT]  / 1000000   - (Real_GPS_coord[LAT] / 10000000)   * 10;
-            line[13] = '0' + Real_GPS_coord[LAT]  / 100000    - (Real_GPS_coord[LAT] / 1000000)    * 10;
-            line[14] = '0' + Real_GPS_coord[LAT]  / 10000     - (Real_GPS_coord[LAT] / 100000)     * 10;
-            line[15] = '0' + Real_GPS_coord[LAT]  / 1000      - (Real_GPS_coord[LAT] / 10000)      * 10;
-            line[16] = '0' + Real_GPS_coord[LAT]  / 100       - (Real_GPS_coord[LAT] / 1000)       * 10;
-            line[17] = '0' + Real_GPS_coord[LAT]  / 10        - (Real_GPS_coord[LAT] / 100)        * 10;
-            line[18] = '0' + Real_GPS_coord[LAT]              - (Real_GPS_coord[LAT] / 10)         * 10;
+            line[8]  = DigitToChar(Real_GPS_coord[LAT], 9);
+            line[9]  = DigitToChar(Real_GPS_coord[LAT], 8);
+            line[10] = DigitToChar(Real_GPS_coord[LAT], 7);
+            line[12] = DigitToChar(Real_GPS_coord[LAT], 6);
+            line[13] = DigitToChar(Real_GPS_coord[LAT], 5);
+            line[14] = DigitToChar(Real_GPS_coord[LAT], 4);
+            line[15] = DigitToChar(Real_GPS_coord[LAT], 3);
+            line[16] = DigitToChar(Real_GPS_coord[LAT], 2);
+            line[17] = DigitToChar(Real_GPS_coord[LAT], 1);
+            line[18] = DigitToChar(Real_GPS_coord[LAT], 0);
         }          
         i2c_OLED_LCDsetLine(3);
         i2c_OLED_LCDprintChar(line);
@@ -383,16 +379,16 @@ void OLED_Status(void)
         if (FEATURE_GPS)
         {
             line[6]  = Real_GPS_coord[LON] < 0 ? 'W' : 'E';
-            line[8]  = '0' + Real_GPS_coord[LON]  / 1000000000;
-            line[9]  = '0' + Real_GPS_coord[LON]  / 100000000 - (Real_GPS_coord[LON] / 1000000000) * 10;
-            line[10] = '0' + Real_GPS_coord[LON]  / 10000000  - (Real_GPS_coord[LON] / 100000000)  * 10;
-            line[12] = '0' + Real_GPS_coord[LON]  / 1000000   - (Real_GPS_coord[LON] / 10000000)   * 10;
-            line[13] = '0' + Real_GPS_coord[LON]  / 100000    - (Real_GPS_coord[LON] / 1000000)    * 10;
-            line[14] = '0' + Real_GPS_coord[LON]  / 10000     - (Real_GPS_coord[LON] / 100000)     * 10;
-            line[15] = '0' + Real_GPS_coord[LON]  / 1000      - (Real_GPS_coord[LON] / 10000)      * 10;
-            line[16] = '0' + Real_GPS_coord[LON]  / 100       - (Real_GPS_coord[LON] / 1000)       * 10;
-            line[17] = '0' + Real_GPS_coord[LON]  / 10        - (Real_GPS_coord[LON] / 100)        * 10;
-            line[18] = '0' + Real_GPS_coord[LON]              - (Real_GPS_coord[LON] / 10)         * 10;
+            line[8]  = DigitToChar(Real_GPS_coord[LON], 9);
+            line[9]  = DigitToChar(Real_GPS_coord[LON], 8);
+            line[10] = DigitToChar(Real_GPS_coord[LON], 7);
+            line[12] = DigitToChar(Real_GPS_coord[LON], 6);
+            line[13] = DigitToChar(Real_GPS_coord[LON], 5);
+            line[14] = DigitToChar(Real_GPS_coord[LON], 4);
+            line[15] = DigitToChar(Real_GPS_coord[LON], 3);
+            line[16] = DigitToChar(Real_GPS_coord[LON], 2);
+            line[17] = DigitToChar(Real_GPS_coord[LON], 1);
+            line[18] = DigitToChar(Real_GPS_coord[LON], 0);
         }
         i2c_OLED_LCDsetLine(4);
         i2c_OLED_LCDprintChar(line);
