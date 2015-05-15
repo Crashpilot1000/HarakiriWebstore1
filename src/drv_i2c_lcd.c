@@ -304,18 +304,14 @@ void i2c_clr_line(uint8_t line)
     i2c_OLED_LCDsetLine(line);
 }
 
-static int32_t poor_int_pow_base10(uint8_t exponent)
-{
-    int32_t result = 1;
-    while (exponent--) result *= 10;
-    return result; 
-}
-
 // Input: int32_t value, digitnr to return (0-9) Note: The first digit of a decimal is number 0. BTW int32 has 10 decimals
 static unsigned char DigitToChar(int32_t input, uint8_t digitnr)
 {
-    int32_t result = input / poor_int_pow_base10(digitnr);
-    if (digitnr < 9) result -= (input / poor_int_pow_base10(digitnr + 1)) * 10;
+    int32_t pow10 = 1;
+    uint8_t exponent = digitnr;
+    while (exponent--) pow10 *= 10;
+    int32_t result = input / pow10;
+    if (digitnr < 9) result -= (input / (pow10 * 10)) * 10;
     return '0' + result;
 }
 
