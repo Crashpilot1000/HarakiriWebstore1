@@ -3,6 +3,8 @@
 // Code for an OLED-Display 128x64 from Wide HK
 // ************************************************************************************************************
 // based of MultiWii, June 2013 Johannes
+// Crashpilot May 2015 cut down the compile length considerably.
+// Can't do more without using more ram and buying an oled module
 
 #include "board.h"
 #include "mw.h"
@@ -154,25 +156,6 @@ const uint8_t myFont[][5] = {
 };
 #define FONTDATASETCOUNT (sizeof(myFont) / sizeof(myFont[0]))
 
-// Input: int32_t value, digit to return (0-9)
-//static unsigned char DigitToChar(int32_t input, uint8_t stelle)
-static unsigned char DigitToChar(int32_t input, uint8_t stelle)
-{
-    const int32_t powtable[10] = {1, 10, 100, 1000, 10000, 100000, 1000000, 10000000, 100000000, 1000000000};
-    int32_t result = input / powtable[stelle];
-    if (stelle < 9) result -= (input / powtable[stelle + 1]) * 10;
-    return '0' + result;
-}
-/*
-For Reference the POW-version, actually compiles to bigger file.
-static unsigned char DigitToChar(int32_t input, uint8_t stelle)
-{
-    int32_t result = input / (int32_t)pow(10, stelle);
-    if (stelle < 9) result -= (input / (int32_t)pow(10, stelle + 1)) * 10;
-    return '0' + result;
-}
-*/
-
 static void i2c_OLED_send_cmd(uint8_t command)
 {
     uint8_t  hexval = 0;
@@ -321,7 +304,29 @@ void i2c_clr_line(uint8_t line)
     i2c_OLED_LCDsetLine(line);
 }
 
-void OLED_Status(void)
+static int32_t poor_int_pow_base10(uint8_t exponent)
+{
+    int32_t result = 1;
+    while (exponent--) result *= 10;
+    return result; 
+}
+
+// Input: int32_t value, digitnr to return (0-9) Note: The first digit of a decimal is number 0. BTW int32 has 10 decimals
+static unsigned char DigitToChar(int32_t input, uint8_t digitnr)
+{
+    int32_t result = input / poor_int_pow_base10(digitnr);
+    if (digitnr < 9) result -= (input / poor_int_pow_base10(digitnr + 1)) * 10;
+    return '0' + result;
+}
+
+static void OledGPSCoordPrtToBuf(int32_t coord, char *buf)      // alternative: sprintf to another buffer and processing that
+{
+    uint8_t i;
+    for (i = 0; i < 3; i++) buf[i + 8]  = DigitToChar(coord, 9 - i);
+    for (i = 0; i < 7; i++) buf[i + 12] = DigitToChar(coord, 6 - i); // Skip decimal point at pos 11
+}
+
+void OLED_Status(void)                                          // Not Time critical, runs in disarmed state
 {
     static uint8_t OLEDDelay = 0;
     char line[22];
@@ -361,17 +366,8 @@ void OLED_Status(void)
         if (FEATURE_GPS)
         {
             line[6]  = Real_GPS_coord[LAT] < 0 ? 'S' : 'N';
-            line[8]  = DigitToChar(Real_GPS_coord[LAT], 9);
-            line[9]  = DigitToChar(Real_GPS_coord[LAT], 8);
-            line[10] = DigitToChar(Real_GPS_coord[LAT], 7);
-            line[12] = DigitToChar(Real_GPS_coord[LAT], 6);
-            line[13] = DigitToChar(Real_GPS_coord[LAT], 5);
-            line[14] = DigitToChar(Real_GPS_coord[LAT], 4);
-            line[15] = DigitToChar(Real_GPS_coord[LAT], 3);
-            line[16] = DigitToChar(Real_GPS_coord[LAT], 2);
-            line[17] = DigitToChar(Real_GPS_coord[LAT], 1);
-            line[18] = DigitToChar(Real_GPS_coord[LAT], 0);
-        }          
+            OledGPSCoordPrtToBuf(Real_GPS_coord[LAT], line);
+        }
         i2c_OLED_LCDsetLine(3);
         i2c_OLED_LCDprintChar(line);
           
@@ -379,16 +375,7 @@ void OLED_Status(void)
         if (FEATURE_GPS)
         {
             line[6]  = Real_GPS_coord[LON] < 0 ? 'W' : 'E';
-            line[8]  = DigitToChar(Real_GPS_coord[LON], 9);
-            line[9]  = DigitToChar(Real_GPS_coord[LON], 8);
-            line[10] = DigitToChar(Real_GPS_coord[LON], 7);
-            line[12] = DigitToChar(Real_GPS_coord[LON], 6);
-            line[13] = DigitToChar(Real_GPS_coord[LON], 5);
-            line[14] = DigitToChar(Real_GPS_coord[LON], 4);
-            line[15] = DigitToChar(Real_GPS_coord[LON], 3);
-            line[16] = DigitToChar(Real_GPS_coord[LON], 2);
-            line[17] = DigitToChar(Real_GPS_coord[LON], 1);
-            line[18] = DigitToChar(Real_GPS_coord[LON], 0);
+            OledGPSCoordPrtToBuf(Real_GPS_coord[LON], line);
         }
         i2c_OLED_LCDsetLine(4);
         i2c_OLED_LCDprintChar(line);

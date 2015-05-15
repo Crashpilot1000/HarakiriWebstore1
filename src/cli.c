@@ -149,8 +149,8 @@ const clicmd_t cmdTable[] =
     { "version", "",                                  cliVersion  },
     { "wpflush", "clear wp list",                     cliWpflush  },
 };
-
 #define CMD_COUNT (sizeof(cmdTable) / sizeof(cmdTable[0]))
+  
 const clivalue_t valueTable[] =
 {
 //    type, Lcd, int16_t min,int32_t max, *ptr,                        *name
@@ -332,7 +332,6 @@ const clivalue_t valueTable[] =
     { VAR_UINT32, 0,       0, 0x7FFFFFFF, &cfg.LED_Pattern2,           "LED_Pattern2"           },
     { VAR_UINT32, 0,       0, 0x7FFFFFFF, &cfg.LED_Pattern3,           "LED_Pattern3"           },
 };
-
 #define VALUE_COUNT (sizeof(valueTable) / sizeof(valueTable[0]))
 
 #ifndef HAVE_ITOA_FUNCTION
