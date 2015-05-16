@@ -331,6 +331,7 @@ void OLED_Status(void)                                          // Not Time crit
 {
     static uint8_t OLEDDelay = 0;
     char line[22];
+    uint8_t i;
     int32_t tmp0;
 
     OLEDDelay++;
@@ -338,13 +339,7 @@ void OLED_Status(void)                                          // Not Time crit
     OLEDDelay = 0;
 
     sprintf(line, "MAG : WARN    ", (int16_t)heading);
-    if (cfg.mag_calibrated)
-    {
-        line[6] = DigitToChar(heading, 3);
-        line[7] = DigitToChar(heading, 2);
-        line[8] = DigitToChar(heading, 1);
-        line[9] = DigitToChar(heading, 0);
-    }
+    if (cfg.mag_calibrated) for (i = 0; i < 4; i++) line[i + 6] = DigitToChar(heading, 3 - i);
     i2c_OLED_PrintLineAtROW(line, 0);                           // i2c_OLED_LCDsetLine(1); i2c_OLED_LCDprintChar(line);
 
     sprintf(line, "VBAT: --,-V AGL: ----");
@@ -355,11 +350,8 @@ void OLED_Status(void)                                          // Not Time crit
         line[9] = DigitToChar(vbat, 0);
     }
     if (EstAlt < 0) line[16] = '-';
-    tmp0     = (int16_t)abs_int((int32_t)EstAlt / 100);
-    line[17] = DigitToChar(tmp0, 3);
-    line[18] = DigitToChar(tmp0, 2);
-    line[19] = DigitToChar(tmp0, 1);
-    line[20] = DigitToChar(tmp0, 0);
+    tmp0 = (int16_t)abs_int((int32_t)EstAlt / 100);
+    for (i = 0; i < 4; i++) line[i + 17] = DigitToChar(tmp0, 3 - i);
     i2c_OLED_PrintLineAtROW(line, 1);                           // i2c_OLED_LCDsetLine(2); i2c_OLED_LCDprintChar(line);
 
     sprintf(line, "LAT :  .-+-.-------  ");
