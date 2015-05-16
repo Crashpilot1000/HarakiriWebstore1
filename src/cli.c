@@ -1343,7 +1343,7 @@ static void LCDclear(void)                                              // clear
     if (i2cLCD)
     {
         i2c_clear_OLED();                                               // Johannes
-        i2c_clr_line(7);
+        i2c_clr_row(6);
     }
     else
     {
@@ -1355,7 +1355,7 @@ static void LCDclear(void)                                              // clear
 
 static void LCDline2(void)                                              // Sets LCD Cursor to line 2 pos 0
 {
-    if (i2cLCD) i2c_clr_line(8);                                        // Johannes
+    if (i2cLCD) i2c_clr_row(7);                                         // Johannes
     else
     {
         SendSerialLCDCmdFE(CursorLine2);

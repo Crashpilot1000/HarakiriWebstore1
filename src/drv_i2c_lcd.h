@@ -6,7 +6,7 @@
 extern uint8_t OLED_Type;           // OLED Type 1, 2
 
 void i2c_clear_OLED(void);
-void i2c_clr_line(uint8_t line);
+void i2c_clr_row(uint8_t row);
 bool i2c_OLED_init(void);
 bool initI2cLCD(bool cli);
 void i2cOSD(void);
