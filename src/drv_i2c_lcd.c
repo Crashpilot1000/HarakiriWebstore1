@@ -13,7 +13,7 @@ extern char * const mixerNames[];    // to display the current mixer
 static uint8_t curOLED_address;      // OLED address of the currentOLED
 uint8_t OLED_Type;                   // 1, 2
 
-static void i2c_OLED_set_line(uint8_t row);
+static void i2c_OLED_set_row(uint8_t row);
 
 bool i2cLCD;                         // true, if an OLED-Display is connected
 
@@ -225,8 +225,7 @@ bool i2c_OLED_init(void)
             OLED_Type = 0;
             return false;
         }
-    }
-    // Init sequence for 128x64 OLED module
+    }                                                           // Init sequence for 128x64 OLED module
     i2c_OLED_send_cmd(SSD1306_DISPLAYOFF);                      // 0xAE
     i2c_OLED_send_cmd(SSD1306_SETDISPLAYCLOCKDIV);              // 0xD5
     i2c_OLED_send_cmd(0x80);                                    // the suggested ratio 0x80
@@ -244,15 +243,15 @@ bool i2c_OLED_init(void)
     i2c_OLED_send_cmd(SSD1306_SETCOMPINS);                      // 0xDA
     i2c_OLED_send_cmd(0x12);
     i2c_OLED_send_cmd(SSD1306_SETCONTRAST);                     // 0x81
-    i2c_OLED_send_cmd(0xCF);                                    //vccstate != SSD1306_EXTERNALVCC)
+    i2c_OLED_send_cmd(0xCF);                                    // vccstate != SSD1306_EXTERNALVCC)
     i2c_OLED_send_cmd(SSD1306_SETPRECHARGE);                    // 0xd9
-    i2c_OLED_send_cmd(0xF1);                                    //vccstate != SSD1306_EXTERNALVCC)
+    i2c_OLED_send_cmd(0xF1);                                    // vccstate != SSD1306_EXTERNALVCC)
     i2c_OLED_send_cmd(SSD1306_SETVCOMDETECT);                   // 0xDB
     i2c_OLED_send_cmd(0x40);
     i2c_OLED_send_cmd(SSD1306_DISPLAYALLON_RESUME);             // 0xA4
     i2c_OLED_send_cmd(SSD1306_NORMALDISPLAY);                   // 0xA6
     delay(20);
-    i2c_OLED_set_line(1);
+    i2c_OLED_set_row(1);
     return true;
 }
 
@@ -260,24 +259,31 @@ bool i2c_OLED_init(void)
 static void i2c_OLED_set_XY(uint8_t col, uint8_t row)           //  Not used in MW V2.0 but its here anyway!
 {
     if(!OLED_Type) return;
-    i2c_OLED_send_cmd(0xb0 + row);                              // set page address
-    i2c_OLED_send_cmd(0x00 + (8 * col & 0x0f));                 // set low col address
+    i2c_OLED_send_cmd(0xb0 + row);                              // set page     address
+    i2c_OLED_send_cmd(0x00 + (8 * col & 0x0f));                 // set low  col address
     i2c_OLED_send_cmd(0x10 + ((8 * col >> 4) & 0x0f));          // set high col address
 }
 */
 
-static void i2c_OLED_set_line(uint8_t row)                      // goto the beginning of a single row, compattible with LCD_CONFIG
+static void i2c_OLED_set_row(uint8_t row)                       // goto the beginning of a single row, compattible with LCD_CONFIG
 {
     if(!OLED_Type) return;
-    i2c_OLED_send_cmd(0xb0 + row);                              // set page address
-    i2c_OLED_send_cmd(0);                                       // set low col address
+    i2c_OLED_send_cmd(0xb0 + row);                              // set page     address
+    i2c_OLED_send_cmd(0);                                       // set low  col address
     i2c_OLED_send_cmd(0x10);                                    // set high col address
 }
 
+/*
 static void i2c_OLED_LCDsetLine(uint8_t line)                   // Line = 1 to 8
 {
-    if(!OLED_Type) return;
-    i2c_OLED_set_line(line - 1);
+    i2c_OLED_set_row(line - 1);
+}
+*/
+
+static void i2c_OLED_PrintLineAtROW(const char *line, uint8_t row)// row = 0 to 7
+{
+    i2c_OLED_set_row(row);
+    i2c_OLED_LCDprintChar(line);
 }
 
 bool initI2cLCD(bool cli)
@@ -287,9 +293,9 @@ bool initI2cLCD(bool cli)
     {
         if (cli) i2cLCD = true;                                 // all printf output now to the OLED-Display
         i2c_clear_OLED();
-        i2c_OLED_LCDsetLine(1); i2c_OLED_LCDprintChar(FIRMWAREFORLCD);
-        i2c_OLED_LCDsetLine(3); i2c_OLED_LCDprintChar("To ENTER CONFIG      ");
-        i2c_OLED_LCDsetLine(4); i2c_OLED_LCDprintChar("PITCH FWD & YAW RIGHT");
+        i2c_OLED_PrintLineAtROW(FIRMWAREFORLCD, 0);             // i2c_OLED_LCDsetLine(1); i2c_OLED_LCDprintChar(FIRMWAREFORLCD);
+        i2c_OLED_PrintLineAtROW("To ENTER CONFIG      ", 2);    // i2c_OLED_LCDsetLine(3); i2c_OLED_LCDprintChar("To ENTER CONFIG      ");
+        i2c_OLED_PrintLineAtROW("PITCH FWD & YAW RIGHT", 3);    // i2c_OLED_LCDsetLine(4); i2c_OLED_LCDprintChar("PITCH FWD & YAW RIGHT");
         return true;
     }
     return false;
@@ -298,10 +304,9 @@ bool initI2cLCD(bool cli)
 void i2c_clr_line(uint8_t line)
 {
     if(!OLED_Type) return;
-    i2c_OLED_LCDsetLine(line);
-    printf("                      ");
-    //      1234567890123456789012
-    i2c_OLED_LCDsetLine(line);
+    i2c_OLED_PrintLineAtROW("                      ", line - 1);
+    //                       1234567890123456789012
+    i2c_OLED_set_row(line - 1);                                 // i2c_OLED_LCDsetLine(line);
 }
 
 // Input: int32_t value, digitnr to return (0-9) Note: The first digit of a decimal is number 0. BTW int32 has 10 decimals
@@ -329,56 +334,51 @@ void OLED_Status(void)                                          // Not Time crit
     int32_t tmp0;
 
     OLEDDelay++;
-    if (OLEDDelay >= 30)
+    if (OLEDDelay < 30) return;
+    OLEDDelay = 0;
+
+    sprintf(line, "MAG : WARN    ", (int16_t)heading);
+    if (cfg.mag_calibrated)
     {
-        OLEDDelay = 0;
-        sprintf(line, "MAG : WARN    ", (int16_t)heading);
-
-        if (cfg.mag_calibrated)
-        {
-            line[6] = DigitToChar(heading, 3);
-            line[7] = DigitToChar(heading, 2);
-            line[8] = DigitToChar(heading, 1);
-            line[9] = DigitToChar(heading, 0);
-        }
-        i2c_OLED_LCDsetLine(1); i2c_OLED_LCDprintChar(line);
-        sprintf(line, "VBAT: --,-V AGL: ----");
-        if (FEATURE_VBAT)
-        {
-            line[6] = DigitToChar(vbat, 2);
-            line[7] = DigitToChar(vbat, 1);
-            line[9] = DigitToChar(vbat, 0);
-        }
-        if (EstAlt < 0) line[16] = '-';
-        tmp0     = (int16_t)abs_int((int32_t)EstAlt / 100);
-        line[17] = DigitToChar(tmp0, 3);
-        line[18] = DigitToChar(tmp0, 2);
-        line[19] = DigitToChar(tmp0, 1);
-        line[20] = DigitToChar(tmp0, 0);
-        i2c_OLED_LCDsetLine(2);
-        i2c_OLED_LCDprintChar(line);
-
-        sprintf(line, "LAT :  .-+-.-------  ");
-        if (FEATURE_GPS)
-        {
-            line[6]  = Real_GPS_coord[LAT] < 0 ? 'S' : 'N';
-            OledGPSCoordPrtToBuf(Real_GPS_coord[LAT], line);
-        }
-        i2c_OLED_LCDsetLine(3);
-        i2c_OLED_LCDprintChar(line);
-          
-        sprintf(line, "LON :  .-+-.-------  ");
-        if (FEATURE_GPS)
-        {
-            line[6]  = Real_GPS_coord[LON] < 0 ? 'W' : 'E';
-            OledGPSCoordPrtToBuf(Real_GPS_coord[LON], line);
-        }
-        i2c_OLED_LCDsetLine(4);
-        i2c_OLED_LCDprintChar(line);
-        
-        if (FEATURE_GPS) sprintf(line, "SAT : %d   FIX : %d  ", GPS_numSat, GPS_FIX);
-        else             sprintf(line, "SAT : -    FIX : -   ");
-        i2c_OLED_LCDsetLine(5);
-        i2c_OLED_LCDprintChar(line);
+        line[6] = DigitToChar(heading, 3);
+        line[7] = DigitToChar(heading, 2);
+        line[8] = DigitToChar(heading, 1);
+        line[9] = DigitToChar(heading, 0);
     }
+    i2c_OLED_PrintLineAtROW(line, 0);                           // i2c_OLED_LCDsetLine(1); i2c_OLED_LCDprintChar(line);
+
+    sprintf(line, "VBAT: --,-V AGL: ----");
+    if (FEATURE_VBAT)
+    {
+        line[6] = DigitToChar(vbat, 2);
+        line[7] = DigitToChar(vbat, 1);
+        line[9] = DigitToChar(vbat, 0);
+    }
+    if (EstAlt < 0) line[16] = '-';
+    tmp0     = (int16_t)abs_int((int32_t)EstAlt / 100);
+    line[17] = DigitToChar(tmp0, 3);
+    line[18] = DigitToChar(tmp0, 2);
+    line[19] = DigitToChar(tmp0, 1);
+    line[20] = DigitToChar(tmp0, 0);
+    i2c_OLED_PrintLineAtROW(line, 1);                           // i2c_OLED_LCDsetLine(2); i2c_OLED_LCDprintChar(line);
+
+    sprintf(line, "LAT :  .-+-.-------  ");
+    if (FEATURE_GPS)
+    {
+        line[6] = Real_GPS_coord[LAT] < 0 ? 'S' : 'N';
+        OledGPSCoordPrtToBuf(Real_GPS_coord[LAT], line);
+    }
+    i2c_OLED_PrintLineAtROW(line, 2);                           // i2c_OLED_LCDsetLine(3); i2c_OLED_LCDprintChar(line);
+
+    sprintf(line, "LON :  .-+-.-------  ");
+    if (FEATURE_GPS)
+    {
+        line[6] = Real_GPS_coord[LON] < 0 ? 'W' : 'E';
+        OledGPSCoordPrtToBuf(Real_GPS_coord[LON], line);
+    }
+    i2c_OLED_PrintLineAtROW(line, 3);                           // i2c_OLED_LCDsetLine(4); i2c_OLED_LCDprintChar(line);
+
+    if (FEATURE_GPS) sprintf(line, "SAT : %d   FIX : %d  ", GPS_numSat, GPS_FIX);
+    else             sprintf(line, "SAT : -    FIX : -   ");
+    i2c_OLED_PrintLineAtROW(line, 4);                           // i2c_OLED_LCDsetLine(5); i2c_OLED_LCDprintChar(line);
 }
