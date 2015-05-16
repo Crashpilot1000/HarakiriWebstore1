@@ -161,7 +161,7 @@ static void i2c_OLED_send_cmd(uint8_t command)
     uint8_t  hexval;
     if(!OLED_Type) return;
     if(OLED_Type == 1) hexval = 0x80;
-    else               hexval = 0;
+    else               hexval = 0x00;
     i2cWrite(curOLED_address, hexval, command);
 }
 
@@ -186,18 +186,18 @@ static void i2c_OLED_LCDprintChar(const char *s)
 void i2c_clear_OLED(void)
 {
     uint16_t i;
-    i2c_OLED_send_cmd(0xa6);                                    // Set Normal Display
-    i2c_OLED_send_cmd(0xae);                                    // Display OFF
+    i2c_OLED_send_cmd(0xA6);                                    // Set Normal Display
+    i2c_OLED_send_cmd(0xAE);                                    // Display OFF
     i2c_OLED_send_cmd(0x20);                                    // Set Memory Addressing Mode
     i2c_OLED_send_cmd(0x00);                                    // Set Memory Addressing Mode to Horizontal addressing mode
-    i2c_OLED_send_cmd(0xb0);                                    // set page address to 0
+    i2c_OLED_send_cmd(0xB0);                                    // set page address to 0
     i2c_OLED_send_cmd(0X40);                                    // Display start line register to 0
     i2c_OLED_send_cmd(0x00);                                    // Set low col address to 0
     i2c_OLED_send_cmd(0x10);                                    // Set high col address to 0
     for (i = 0; i < 1024; i++) i2c_OLED_send_byte(0);           // fill the display's RAM with 0 128 * 64pixl
     i2c_OLED_send_cmd(0x81);                                    // Setup CONTRAST CONTROL, following byte is the contrast Value... always a 2 byte instruction
     i2c_OLED_send_cmd(200);                                     // Here you can set the brightness 1 = dull, 255 is very bright
-    i2c_OLED_send_cmd(0xaf);                                    // display on
+    i2c_OLED_send_cmd(0xAF);                                    // display on
 }
 
 bool i2c_OLED_init(void)
@@ -227,19 +227,19 @@ bool i2c_OLED_init(void)
     i2c_OLED_send_cmd(SSD1306_SETMULTIPLEX);                    // 0xA8
     i2c_OLED_send_cmd(0x3F);
     i2c_OLED_send_cmd(SSD1306_SETDISPLAYOFFSET);                // 0xD3
-    i2c_OLED_send_cmd(0x0);                                     // no offset
-    i2c_OLED_send_cmd(SSD1306_SETSTARTLINE | 0x0);              // line #0
+    i2c_OLED_send_cmd(0x00);                                    // no offset
+    i2c_OLED_send_cmd(SSD1306_SETSTARTLINE | 0x00);             // line #0
     i2c_OLED_send_cmd(SSD1306_CHARGEPUMP);                      // 0x8D
     i2c_OLED_send_cmd(0x14);                                    // vccstate != SSD1306_EXTERNALVCC)
     i2c_OLED_send_cmd(SSD1306_MEMORYMODE);                      // 0x20
-    i2c_OLED_send_cmd(0x00);                                    // 0x0 act like ks0108
-    i2c_OLED_send_cmd(SSD1306_SEGREMAP | 0x1);
+    i2c_OLED_send_cmd(0x00);                                    // 0x00 act like ks0108
+    i2c_OLED_send_cmd(SSD1306_SEGREMAP | 0x01);
     i2c_OLED_send_cmd(SSD1306_COMSCANDEC);
     i2c_OLED_send_cmd(SSD1306_SETCOMPINS);                      // 0xDA
     i2c_OLED_send_cmd(0x12);
     i2c_OLED_send_cmd(SSD1306_SETCONTRAST);                     // 0x81
     i2c_OLED_send_cmd(0xCF);                                    // vccstate != SSD1306_EXTERNALVCC)
-    i2c_OLED_send_cmd(SSD1306_SETPRECHARGE);                    // 0xd9
+    i2c_OLED_send_cmd(SSD1306_SETPRECHARGE);                    // 0xD9
     i2c_OLED_send_cmd(0xF1);                                    // vccstate != SSD1306_EXTERNALVCC)
     i2c_OLED_send_cmd(SSD1306_SETVCOMDETECT);                   // 0xDB
     i2c_OLED_send_cmd(0x40);
@@ -252,8 +252,8 @@ bool i2c_OLED_init(void)
 
 static void i2c_OLED_set_row(uint8_t row)                       // goto the beginning of a single row, compattible with LCD_CONFIG
 {
-    i2c_OLED_send_cmd(0xb0 + row);                              // set page     address
-    i2c_OLED_send_cmd(0);                                       // set low  col address
+    i2c_OLED_send_cmd(0xB0 + row);                              // set page     address
+    i2c_OLED_send_cmd(0x00);                                    // set low  col address
     i2c_OLED_send_cmd(0x10);                                    // set high col address
 }
 

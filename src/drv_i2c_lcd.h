@@ -48,8 +48,8 @@ void OLED_Status(void);
 
 #define SSD1306_CHARGEPUMP                              0x8D
 
-#define SSD1306_EXTERNALVCC                             0x1
-#define SSD1306_SWITCHCAPVCC                            0x2
+#define SSD1306_EXTERNALVCC                             0x01
+#define SSD1306_SWITCHCAPVCC                            0x02
 
 // Scrolling #defines
 #define SSD1306_ACTIVATE_SCROLL                         0x2F
