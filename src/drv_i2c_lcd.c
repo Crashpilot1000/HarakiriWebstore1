@@ -3,7 +3,7 @@
 // Code for an OLED-Display 128x64 from Wide HK
 // ************************************************************************************************************
 // based of MultiWii, June 2013 Johannes
-// Crashpilot May 2015 cut down the compile length considerably.
+// Crashpilot May 2015 cut down the compile length considerably and rearranged some stuff.
 // Can't do more without using more ram and buying an oled module
 
 #include "board.h"
@@ -158,48 +158,43 @@ const uint8_t myFont[][5] = {
 
 static void i2c_OLED_send_cmd(uint8_t command)
 {
-    uint8_t  hexval = 0;
+    uint8_t  hexval;
     if(!OLED_Type) return;
     if(OLED_Type == 1) hexval = 0x80;
-    i2cWrite(curOLED_address, hexval, (uint8_t)command);
+    else               hexval = 0;
+    i2cWrite(curOLED_address, hexval, command);
 }
 
 static void i2c_OLED_send_byte(uint8_t val)
 {
     if(!OLED_Type) return;
-    i2cWrite(curOLED_address, 0x40, (uint8_t)val);
+    i2cWrite(curOLED_address, 0x40, val);
 }
 
 void i2c_OLED_send_char(unsigned char ascii)
 {
     uint16_t i, offset = constrain_int(ascii - 32, 0, FONTDATASETCOUNT - 1); // Ensure Range to not exceed fontarray
-    for( i = 0; i < 5; i++) i2c_OLED_send_byte(myFont[offset][i]);
-    i2c_OLED_send_byte(0);                                      // Don't know why this is here ask the OLED-guys.
-}
-
-static void i2c_OLED_LCDprint(uint8_t i)
-{
-    i2c_OLED_send_char(i);
+    for (i = 0; i < 5; i++) i2c_OLED_send_byte(myFont[offset][i]);
+    i2c_OLED_send_byte(0);                                      // Don't know why this is here ask the OLED-guys. Maybe Space between chars?
 }
 
 static void i2c_OLED_LCDprintChar(const char *s)
 {
-    while (*s) {i2c_OLED_LCDprint(*s++);}
+    while (*s) {i2c_OLED_send_char(*s++);}
 }
 
 void i2c_clear_OLED(void)
 {
     uint16_t i;
-    if(!OLED_Type) return;
     i2c_OLED_send_cmd(0xa6);                                    // Set Normal Display
     i2c_OLED_send_cmd(0xae);                                    // Display OFF
     i2c_OLED_send_cmd(0x20);                                    // Set Memory Addressing Mode
     i2c_OLED_send_cmd(0x00);                                    // Set Memory Addressing Mode to Horizontal addressing mode
     i2c_OLED_send_cmd(0xb0);                                    // set page address to 0
     i2c_OLED_send_cmd(0X40);                                    // Display start line register to 0
-    i2c_OLED_send_cmd(0);                                       // Set low col address to 0
+    i2c_OLED_send_cmd(0x00);                                    // Set low col address to 0
     i2c_OLED_send_cmd(0x10);                                    // Set high col address to 0
-    for(i = 0; i < 1024; i++) i2c_OLED_send_byte(0);            // fill the display's RAM with 0 128 * 64pixl
+    for (i = 0; i < 1024; i++) i2c_OLED_send_byte(0);           // fill the display's RAM with 0 128 * 64pixl
     i2c_OLED_send_cmd(0x81);                                    // Setup CONTRAST CONTROL, following byte is the contrast Value... always a 2 byte instruction
     i2c_OLED_send_cmd(200);                                     // Here you can set the brightness 1 = dull, 255 is very bright
     i2c_OLED_send_cmd(0xaf);                                    // display on
@@ -258,7 +253,6 @@ bool i2c_OLED_init(void)
 /*
 static void i2c_OLED_set_XY(uint8_t col, uint8_t row)           //  Not used in MW V2.0 but its here anyway!
 {
-    if(!OLED_Type) return;
     i2c_OLED_send_cmd(0xb0 + row);                              // set page     address
     i2c_OLED_send_cmd(0x00 + (8 * col & 0x0f));                 // set low  col address
     i2c_OLED_send_cmd(0x10 + ((8 * col >> 4) & 0x0f));          // set high col address
@@ -267,7 +261,6 @@ static void i2c_OLED_set_XY(uint8_t col, uint8_t row)           //  Not used in 
 
 static void i2c_OLED_set_row(uint8_t row)                       // goto the beginning of a single row, compattible with LCD_CONFIG
 {
-    if(!OLED_Type) return;
     i2c_OLED_send_cmd(0xb0 + row);                              // set page     address
     i2c_OLED_send_cmd(0);                                       // set low  col address
     i2c_OLED_send_cmd(0x10);                                    // set high col address
@@ -303,7 +296,6 @@ bool initI2cLCD(bool cli)
 
 void i2c_clr_line(uint8_t line)
 {
-    if(!OLED_Type) return;
     i2c_OLED_PrintLineAtROW("                      ", line - 1);
     //                       1234567890123456789012
     i2c_OLED_set_row(line - 1);                                 // i2c_OLED_LCDsetLine(line);
