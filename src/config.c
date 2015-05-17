@@ -147,7 +147,7 @@ static void resetConf(void)
 
     memcpy(&cfg.align, default_align, sizeof(cfg.align));
     cfg.align_board_yaw           = 0;          // 0 = 0 Deg. 1 = 90 Deg. 2 = 180 Deg. 3 = 270 Deg Clockwise
-    cfg.mag_dec                   = 113;        // Crashpilot //cfg.acc_hdw = ACC_DEFAULT;// default/autodetect
+    cfg.mag_dec                   = 130;        // Crashpilot //cfg.acc_hdw = ACC_DEFAULT;// default/autodetect
     cfg.mag_time                  = 1;          // (1-6) Calibration time in minutes
     cfg.mag_gain                  = 0;          // 0(default) = 1.9 GAUSS ; 1 = 2.5 GAUSS (problematic copters, will reduce 20% resolution)
     cfg.acc_hdw                   = 2;          // Crashpilot MPU6050
@@ -163,9 +163,6 @@ static void resetConf(void)
 
     cfg.gy_gcmpf                  = 700;        // (10-1000) 400 default. Now 1000. The higher, the more weight gets the gyro and the lower is the correction with Acc data.
     cfg.gy_mcmpf                  = 200;        // (10-2000) 200 default for 10Hz. Now higher. Gyro/Magnetometer Complement.
-
-
-    cfg.gy_smyw                   = 0;          // In Tricopter mode a "1" will enable a moving average filter, anything higher will also enable a lowpassfilter
     cfg.gy_lpf                    = 42;         // Values for MPU 6050/3050: 256, 188, 98, 42, 20, 10, (HZ) For L3G4200D: 93, 78, 54, 32
     cfg.gy_stdev                  = 5;
 

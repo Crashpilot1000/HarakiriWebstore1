@@ -246,7 +246,6 @@ const clivalue_t valueTable[] =
     { VAR_UINT16, 0,       0,        256, &cfg.gy_lpf,                 "gy_lpf"                 },
     { VAR_UINT16, 1,       1,      10000, &cfg.gy_gcmpf,               "gy_gcmpf"               },
     { VAR_UINT16, 1,       1,      10000, &cfg.gy_mcmpf,               "gy_mcmpf"               },
-    { VAR_UINT8,  1,       0,        200, &cfg.gy_smyw,                "gy_smyw"                },
     { VAR_UINT8,  0,       5,        100, &cfg.gy_stdev,               "gy_stdev"               },
     { VAR_FLOAT,  1,       0,          1, &cfg.accz_vcf,               "accz_vcf"               },
     { VAR_FLOAT,  1,       0,          1, &cfg.accz_acf,               "accz_acf"               },

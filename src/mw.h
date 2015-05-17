@@ -293,8 +293,6 @@ typedef struct config_t
     uint16_t gy_gcmpf;                      // Set the Gyro Weight for Gyro/Acc complementary filter. Increasing this value would reduce and delay Acc influence on the output of the filter.
     uint16_t gy_mcmpf;
 
-
-    uint8_t  gy_smyw;                       // In Tricopter mode a "1" will enable a moving average filter, anything higher will also enable a lowpassfilter
     float    accz_vcf;                      // Crashpilot: Value for complementary filter accz and barovelocity
     float    accz_acf;                      // Crashpilot: Value for complementary filter accz and altitude
     float    bar_lag;                       // Lag of Baro
