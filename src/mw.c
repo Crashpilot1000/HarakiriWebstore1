@@ -57,25 +57,26 @@ bool     ForceRCExpInit = true;
 volatile int32_t  IRQGPS_coord[2];                                   // They occure serial IRQ is done, and they are fed to Real_GPS_coord synchronized
 volatile uint16_t IRQGPS_speed;
 volatile uint16_t IRQGPS_grcrs;
-volatile bool  GPS_FIX = false;
-int32_t  Real_GPS_coord[2];                                          // RAW GPS Coords
-int32_t  GPS_home[2];
-int32_t  GPS_WP[2];                                                  // Currently used WP
+volatile bool     GPS_FIX = false;
 volatile uint8_t  GPS_numSat;
-uint32_t GPS_distanceToHome;                                         // distance to home
-int32_t  GPS_directionToHome;                                        // direction to home or hol point in degrees
-uint16_t GPS_speed_raw;                                              // speed in cm/s
-uint16_t GPS_speed_avg;                                              // speed in cm/s averaged by moving avg with 6 elements
 volatile uint16_t GPS_altitude;                                      // altitude in m
+
+int32_t  Real_GPS_coord[2] = {GPSLatLonErrorVal, GPSLatLonErrorVal}; // RAW GPS Coords
+int32_t  GPS_home[2]       = {GPSLatLonErrorVal, GPSLatLonErrorVal};
+int32_t  GPS_WP[2]         = {GPSLatLonErrorVal, GPSLatLonErrorVal}; // Currently used WP
+uint32_t GPS_distanceToHome  = GPSDistErrorVal;                      // distance to home
+uint16_t GPS_ground_course   = GPSBearingErrorVal;                   // DEG * 10
+int32_t  GPS_directionToHome = GPSBearingErrorVal;                   // direction to home or hol point in degrees
+uint16_t GPS_speed_raw       = GPSSpeedErrorVal;                     // speed in cm/s
+uint16_t GPS_speed_avg       = GPSSpeedErrorVal;                     // speed in cm/s averaged by moving avg with 6 elements
 uint8_t  GPS_update = 0;                                             // it's a binary toogle to distinct a GPS position update
-float    GPS_angle[2] = {0, 0};                                      // it's the angles that must be applied for GPS correction
+float    GPS_angle[2]      = {0, 0};                                 // it's the angles that must be applied for GPS correction
 float    Last_GPS_angle[2] = {0, 0};
-uint16_t GPS_ground_course = 0;                                      // DEG * 10
-float    nav[2];                                                     // DEG * 100
+float    nav[2]     = {0, 0};                                        // DEG * 100
 int16_t  maxbank10  = 1;                                             // Maximum GPS Tiltangle in degree * 10 // preset to 1 for safety to prevent div 0
 int16_t  maxbank100 = 1;                                             // Maximum GPS Tiltangle in degree * 100
 float    GPSEXPO;
-int8_t   nav_mode = NAV_MODE_NONE;                                   // Navigation mode
+int8_t   nav_mode  = NAV_MODE_NONE;                                  // Navigation mode
 int8_t   wp_status = WP_STATUS_NONE;                                 // Waypoint status
 int8_t   ph_status;
 int32_t  WP_Target_Alt;

@@ -137,70 +137,53 @@ void GPS_calc_velocity(void)                                                    
 // var x = cos(lat1) * sin(lat2) - sin(lat1) * coslat2 * cos(dLon);
 // var brng = atan2(y, x).toDeg(); -180  0 +180
 // bearing is in deg*100!
-void GPS_distance_cm_bearing(int32_t *TrgtLAT, int32_t *TrgtLON, uint32_t *dist, int32_t *bearing)
+
+void GPS_distance_cm_bearing(int32_t *TrgtGPS, uint32_t *dist, int32_t *bearing)
 {
     float dLatRAW, dLonRAW, x, y, lat1RAD, lat2RAD, Coslat2RAD;
-    if (*TrgtLAT && Real_GPS_coord[LAT] && *TrgtLON && Real_GPS_coord[LON])     // Errorcheck
+
+    if (TrgtGPS[LAT]        == GPSLatLonErrorVal ||
+        TrgtGPS[LON]        == GPSLatLonErrorVal ||
+        Real_GPS_coord[LAT] == GPSLatLonErrorVal ||
+        Real_GPS_coord[LON] == GPSLatLonErrorVal)
     {
-        GPS_calc_longitude_scaling(false);                                      // Check scaling, don't force new scaling
-        dLatRAW    = (float)(*TrgtLAT - Real_GPS_coord[LAT]);                   // difference of latitude in 1/10 000 000 degrees
-        dLonRAW    = (float)(*TrgtLON - Real_GPS_coord[LON]);      
-        x          = dLonRAW * CosLatScaleLon;
-        *dist      = sqrtf(dLatRAW * dLatRAW + x * x) * MagicEarthNumber;       // dist in cm
-        dLonRAW   *= GPSRAWtoRAD;                                               // dLatRAW = dLatRAW * GPSRAWtoRAD; // 10^7 DEGdelta to Rad
-        lat1RAD    = Real_GPS_coord[LAT] * GPSRAWtoRAD;
-        lat2RAD    = *TrgtLAT            * GPSRAWtoRAD;
-        Coslat2RAD = cosf(lat2RAD);
-        y          = sinf(dLonRAW) * Coslat2RAD;
-        x          = cosf(lat1RAD) * sinf(lat2RAD) - sinf(lat1RAD) * Coslat2RAD * cosf(dLonRAW);
-        *bearing   = constrain_int((int32_t)(atan2f(y, x) * RADtoDEG100), -18000, 18000);
-        if (*bearing < 0) *bearing += 36000;
+        *dist    = GPSDistErrorVal;
+        *bearing = GPSBearingErrorVal;
+        return;
     }
-    else                                                                        // Error!
-    {
-        *dist = 0;
-        *bearing = 0;
-    }
-}
 
-
-/*
-CURRENTLY NOT USED
-
-// Result is in DEG*100!
-int32_t GPS_TargetBearing(int32_t *TrgtLAT, int32_t *TrgtLON)                   // Just get Targetbearing
-{
-    float   dLonRAW, x, y, lat1RAD, lat2RAD, Coslat2RAD;
-    int32_t result;
-    if(!Real_GPS_coord[LAT] || !Real_GPS_coord[LON] || !*TrgtLAT || !*TrgtLON) return 0;
-    GPS_calc_longitude_scaling(false);
-    dLonRAW    = (float)(*TrgtLON - Real_GPS_coord[LON]) * GPSRAWtoRAD;
-    lat1RAD    = Real_GPS_coord[LAT]                     * GPSRAWtoRAD;
-    lat2RAD    = *TrgtLAT                                * GPSRAWtoRAD;
+    GPS_calc_longitude_scaling(false);                                      // Check scaling, don't force new scaling
+    dLatRAW    = (float)(TrgtGPS[LAT] - Real_GPS_coord[LAT]);                   // difference of latitude in 1/10 000 000 degrees
+    dLonRAW    = (float)(TrgtGPS[LON] - Real_GPS_coord[LON]);
+    x          = dLonRAW * CosLatScaleLon;
+    *dist      = sqrtf(dLatRAW * dLatRAW + x * x) * MagicEarthNumber;       // dist in cm
+    dLonRAW   *= GPSRAWtoRAD;                                               // dLatRAW = dLatRAW * GPSRAWtoRAD; // 10^7 DEGdelta to Rad
+    lat1RAD    = Real_GPS_coord[LAT] * GPSRAWtoRAD;
+    lat2RAD    = TrgtGPS[LAT]        * GPSRAWtoRAD;
     Coslat2RAD = cosf(lat2RAD);
     y          = sinf(dLonRAW) * Coslat2RAD;
     x          = cosf(lat1RAD) * sinf(lat2RAD) - sinf(lat1RAD) * Coslat2RAD * cosf(dLonRAW);
-    result     = constrain((int32_t)(atan2f(y, x) * RADtoDEG100), -18000, 18000);
-    if (result < 0) result += 36000;
-    return result;
+    *bearing   = constrain_int((int32_t)(atan2f(y, x) * RADtoDEG100), -18000, 18000);
+    if (*bearing < 0) *bearing += 36000;
 }
-*/
 
 ////////////////////////////////////////////////////////////////////////////////////
 // Calculate a location error between two gps coordinates. Crashpilot distance error in CM now!
-void GPS_calc_location_error(int32_t *TrgtLAT, int32_t *TrgtLON)
+
+void GPS_calc_loc_error(int32_t *TrgtGPS)
 {
     GPS_calc_longitude_scaling(false);                          // Just in case scaling isn't done
-    if (*TrgtLON && *TrgtLAT && Real_GPS_coord[LON] && Real_GPS_coord[LAT])
+    if (TrgtGPS[LAT]        == GPSLatLonErrorVal ||
+        TrgtGPS[LON]        == GPSLatLonErrorVal ||
+        Real_GPS_coord[LAT] == GPSLatLonErrorVal ||
+        Real_GPS_coord[LON] == GPSLatLonErrorVal)
     {
-        LocError[LON] = (float)(*TrgtLON - Real_GPS_coord[LON]) * MagicEarthNumber * CosLatScaleLon; // X Error in cm not lon!
-        LocError[LAT] = (float)(*TrgtLAT - Real_GPS_coord[LAT]) * MagicEarthNumber;                  // Y Error in cm not lat!
+        LocError[LON] = GPSDistErrorVal;
+        LocError[LAT] = GPSDistErrorVal;
+        return;
     }
-    else
-    {
-        LocError[LON] = 0;
-        LocError[LAT] = 0;
-    }
+    LocError[LON] = (float)(TrgtGPS[LON] - Real_GPS_coord[LON]) * MagicEarthNumber * CosLatScaleLon; // X Error in cm not lon!
+    LocError[LAT] = (float)(TrgtGPS[LAT] - Real_GPS_coord[LAT]) * MagicEarthNumber;                  // Y Error in cm not lat!
 }
 
 ////////////////////////////////////////////////////////////////////////////////////

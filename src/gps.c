@@ -2,16 +2,15 @@
 #include "mw.h"
 
 #define PhStickCenterTimeout  350         // Defines the time in ms when we consider the sticks really back to center
-#define PhSettleTimeout       410         // Defines the time in ms, where actual speed must be below settlespeed, to consider a settled copter
 
 // NAVIGATION & Crosstrack Common Variables
-int32_t   target_bearing;                 // target_bearing is where we should be heading
-uint32_t  wp_distance;
-float     waypoint_speed_gov;             // used for slow speed wind up when start navigation;
-int32_t   nav_bearing;                    // This is the angle from the copter to the "next_WP" location  with the addition of Crosstrack error in degrees * 100 // Crosstrack eliminated left here on purpose
-int16_t   nav_takeoff_heading;            // saves the heading at takeof (1deg = 1) used to rotate to takeoff direction when arrives at home
-int32_t   original_target_bearing;        // deg*100, The original angle to the next_WP when the next_WP was set Also used to check when we pass a WP
-float     LocError[2];                    // updated after GPS read - 5-10hz Error in cm from target
+float     waypoint_speed_gov;                                 // used for slow speed wind up when start navigation;
+uint32_t  wp_distance             = GPSDistErrorVal;
+int32_t   target_bearing          = GPSBearingErrorVal;       // target_bearing is where we should be heading
+int32_t   nav_bearing             = GPSBearingErrorVal;       // This is the angle from the copter to the "next_WP" location  with the addition of Crosstrack error in degrees * 100 // Crosstrack eliminated left here on purpose
+int16_t   nav_takeoff_heading     = GPSBearingErrorVal;       // saves the heading at takeof (1deg = 1) used to rotate to takeoff direction when arrives at home
+int32_t   original_target_bearing = GPSBearingErrorVal;       // deg*100, The original angle to the next_WP when the next_WP was set Also used to check when we pass a WP
+float     LocError[2] = {GPSDistErrorVal, GPSDistErrorVal};   // updated after GPS read - 5-10hz Error in cm from target
 
 // PH Variables
 static bool PH1stRun;
@@ -72,7 +71,7 @@ static void GPS_HzSandbox(void)
     }
     else                                                                        // Do dist to Home Stuff here
     {
-        GPS_distance_cm_bearing(&GPS_home[LAT], &GPS_home[LON], &GPS_distanceToHome, &GPS_directionToHome);
+        GPS_distance_cm_bearing(GPS_home, &GPS_distanceToHome, &GPS_directionToHome);
         GPS_distanceToHome  /= 100;                                             // Back to meters
         GPS_directionToHome /= 100;                                             // Back to degrees
         if (GPS_distanceToHome > cfg.GPS_MaxDistToHome ) cfg.GPS_MaxDistToHome = GPS_distanceToHome; // Stats
@@ -160,7 +159,7 @@ static void GPS_HzSandbox(void)
             case 4:                                                             // Do this forever ?
                 PHtoofast = false;
                 PHChange  = false;
-                GPS_calc_location_error(&GPS_WP[LAT], &GPS_WP[LON]);
+                GPS_calc_loc_error(GPS_WP);
                 ph_status = PH_STATUS_DONE;
                 break;
             }
@@ -175,8 +174,8 @@ static void GPS_HzSandbox(void)
 
         case NAV_MODE_WP:
         case NAV_MODE_RTL:
-            GPS_distance_cm_bearing(&GPS_WP[LAT], &GPS_WP[LON], &wp_distance, &target_bearing);
-            GPS_calc_location_error(&GPS_WP[LAT], &GPS_WP[LON]);
+            GPS_distance_cm_bearing(GPS_WP, &wp_distance, &target_bearing);
+            GPS_calc_loc_error(GPS_WP);
 
             speed = GPS_calc_desired_speed();
             GPS_calc_nav_rate(speed);                                           // use error as the desired rate towards the target Desired output is in nav_lat and nav_lon where 1deg inclination is 100
@@ -213,8 +212,8 @@ void GPS_set_next_wp(int32_t *lat, int32_t *lon)
     GPS_WP[LON] = *lon;
 
     GPS_calc_longitude_scaling(true);
-    GPS_distance_cm_bearing(&GPS_WP[LAT], &GPS_WP[LON], &wp_distance, &target_bearing);
-    GPS_calc_location_error(&GPS_WP[LAT], &GPS_WP[LON]);
+    GPS_distance_cm_bearing(GPS_WP, &wp_distance, &target_bearing);
+    GPS_calc_loc_error(GPS_WP);
     nav_bearing = target_bearing;
     original_target_bearing = target_bearing;
     waypoint_speed_gov = (float)cfg.nav_speed_min;

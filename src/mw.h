@@ -15,10 +15,11 @@
 #define LON  1
 #define GPS_Y 0
 #define GPS_X 1
+// We need some Errorvalues for GPS values defined since "0" or "-1" etc. wouldn't do it
 #define GPSLatLonErrorVal      1900000000   // 190 Deg * 10^7 can never be reached
 #define GPSBearingErrorVal          40000   // Normal Range 0 - 36000
 #define GPSDistErrorVal         100000000   // 1000 Km is assumed to be a wrong distance...
-#define GPSSpeedErrorVal            65535   // 65535 cm/s = 2359,26 Km/h
+#define GPSSpeedErrorVal            65000   // 65000 cm/s = 2340 Km/h
 
 // RC & EXPO
 #define RcTrimstep 2.0f
@@ -667,8 +668,9 @@ void     GPS_calc_longitude_scaling(bool force);
 void     GPS_set_next_wp(int32_t *lat, int32_t *lon);
 void     GPS_calc_velocity(void);
 void     GPS_calc_posholdCrashpilot(bool overspeed);
-void     GPS_calc_location_error(int32_t *TrgtLAT, int32_t *TrgtLON);
-void     GPS_distance_cm_bearing(int32_t *TrgtLAT, int32_t *TrgtLON, uint32_t *dist, int32_t *bearing);
+void     GPS_calc_loc_error(int32_t *TrgtGPS);
+void     GPS_distance_cm_bearing(int32_t *TrgtGPS, uint32_t *dist, int32_t *bearing);
+
 
 // Currently not used int32_t  GPS_TargetBearing(int32_t *TrgtLAT, int32_t *TrgtLON);
 
