@@ -47,7 +47,7 @@ volatile uint32_t TimestampNewGPSdata;    // Crashpilot in micros
 
 // Earth / Location constants
 //static float     OneCmTo[2];              // Moves one cm in Gps coords
-static float     CosLatScaleLon;          // this is used to offset the shrinking longitude as we go towards the poles
+static float     CosLatScaleLon;                                                // this is used to offset the shrinking longitude as we go towards the poles
 static float     GPSRAWtoRAD;
 
 static float     get_P(float error, struct PID_PARAM_* pid);
@@ -55,24 +55,65 @@ static float     get_I(float error, float* dt, struct PID_* pid, struct PID_PARA
 static float     get_D(float error, float* dt, struct PID_* pid, struct PID_PARAM_* pid_param);
 static int32_t   wrap_18000(int32_t value);
 
+
+#define NumberOfSpeedListEntries 6
+
+static uint16_t Do_Speedlist_Getavg(uint16_t *list)                             // Will pass GPS_speed_raw if list is empty
+{
+    static uint8_t  GPSrawspeedlistElement = 0;
+    uint32_t        GPSrawspeedlistSum     = 0, GPSrawspeedlistDivisor = 0;
+    uint8_t         i;
+
+    if (GPS_numSat < 5) list[GPSrawspeedlistElement] = GPSSpeedErrorVal;        // Speed far off below 5 sats
+    else                list[GPSrawspeedlistElement] = GPS_speed_raw;
+    GPSrawspeedlistElement++;
+    if (GPSrawspeedlistElement == NumberOfSpeedListEntries) GPSrawspeedlistElement = 0;
+    for (i = 0; i < NumberOfSpeedListEntries; i++)
+    {
+        if (list[i] != GPSSpeedErrorVal)
+        {
+            GPSrawspeedlistSum += list[i];
+            GPSrawspeedlistDivisor++;
+        }
+    }
+    if (GPSrawspeedlistDivisor) return GPSrawspeedlistSum / GPSrawspeedlistDivisor;
+    else                        return GPSSpeedErrorVal;
+}
+
+static void Clear_GPSspeed_list(uint16_t *list)
+{
+    uint8_t i;
+    for (i = 0; i < NumberOfSpeedListEntries; i++) list[i] = GPSSpeedErrorVal;  // Set list to errorvalue
+}
+
+// GetGPSHzFilter
+// Why is this here: Because GPS will be sending at quiet a nailed rate (if not overloaded by junk tasks at the brink of its specs)
+// but we might read out with timejitter because Irq might be off by a few us so we do a +-10% margin around the time between GPS
+// datasets representing the most common Hz-rates today. You might want to extend the list or find a smarter way.
+// Don't overload your GPS in its config with trash, choose a Hz rate that it can deliver at a sustained rate.
+static float GetGPSHzFilter(uint32_t deltaTms)
+{
+    if (deltaTms >= 225 && deltaTms <= 275) return  4.0f;                       //  4Hz Data 250ms
+    if (deltaTms >= 180 && deltaTms <= 220) return  5.0f;                       //  5Hz Data 200ms
+    if (deltaTms >=  90 && deltaTms <= 110) return 10.0f;                       // 10Hz Data 100ms
+    if (deltaTms >=  45 && deltaTms <=  55) return 20.0f;                       // 20Hz Data  50ms
+    if (deltaTms >=  30 && deltaTms <=  36) return 30.0f;                       // 30Hz Data  33ms
+    if (deltaTms >=  23 && deltaTms <=  27) return 40.0f;                       // 40Hz Data  25ms
+    if (deltaTms >=  18 && deltaTms <=  22) return 50.0f;                       // 50Hz Data  20ms
+    return 1000.0f / (float)deltaTms;                                           // Filter failed. Set GPS Hz by measurement
+}
+
 ////////////////////////////////////////////////////////////////////////////////////
 // Calculate our current speed vector from gps&acc position data
 // This is another important part of the gps ins
-
-static void ResetGPSavgSpeed(uint16_t *list)
-{
-    uint8_t i;
-    for (i = 0; i < 6; i++) list[i] = GPSSpeedErrorVal;                         // Set list to errorvalue
-}
-
 void GPS_calc_velocity(void)                                                    // actual_speed[GPS_Y] y_GPS_speed positve = Up (NORTH) // actual_speed[GPS_X] x_GPS_speed positve = Right (EAST)
 {
     static uint32_t LastTimestampNewGPSdata;
-    static uint16_t GPSrawspeedlist[6];
-    static uint8_t  GPSrawspeedlistElement = 0;
+    static uint16_t GPSrawspeedlist[NumberOfSpeedListEntries];
+
     static bool     INSusable;
-    float           gpsHz, tmp0;
-    uint32_t        RealGPSDeltaTime, GPSrawspeedlistSum = 0, GPSrawspeedlistDivisor = 0;
+    float           tmp0;
+    uint32_t        RealGPSDeltaTime;
     uint8_t         i;
 
     GPS_calc_longitude_scaling(false);                                          // Init CosLatScaleLon if not already done to avoid div by zero etc..
@@ -89,29 +130,9 @@ void GPS_calc_velocity(void)                                                    
             Real_GPS_coord[LAT] = IRQGPS_coord[LAT];                            // That makes shure they are synchronized and don't randomly appear in the code..
             GPS_speed_raw       = IRQGPS_speed;
             GPS_ground_course   = IRQGPS_grcrs;
-            INSusable = true;                                                   // INS is alive
-            if (GPS_numSat < 5) GPSrawspeedlist[GPSrawspeedlistElement] = GPSSpeedErrorVal; // Speed far off below 5 sats
-            else                GPSrawspeedlist[GPSrawspeedlistElement] = GPS_speed_raw;
-            GPSrawspeedlistElement++;
-            if (GPSrawspeedlistElement == 6) GPSrawspeedlistElement = 0;
-            for (i = 0; i < 6; i++)
-            {
-                if (GPSrawspeedlist[i] != GPSSpeedErrorVal)
-                {
-                    GPSrawspeedlistSum += GPSrawspeedlist[i];
-                    GPSrawspeedlistDivisor++;
-                }
-            }
-            if (GPSrawspeedlistDivisor) GPS_speed_avg = GPSrawspeedlistSum / GPSrawspeedlistDivisor;
-            else                        GPS_speed_avg = GPSSpeedErrorVal;
-
-            if      (RealGPSDeltaTime >  18 && RealGPSDeltaTime <  22) gpsHz = 50.0f; // 50Hz Data  20ms filter out timejitter
-            else if (RealGPSDeltaTime >  45 && RealGPSDeltaTime <  55) gpsHz = 20.0f; // 20Hz Data  50ms filter out timejitter
-            else if (RealGPSDeltaTime >  90 && RealGPSDeltaTime < 110) gpsHz = 10.0f; // 10Hz Data 100ms filter out timejitter
-            else if (RealGPSDeltaTime > 180 && RealGPSDeltaTime < 220) gpsHz = 5.0f;  //  5Hz Data 200ms
-            else if (RealGPSDeltaTime > 225 && RealGPSDeltaTime < 275) gpsHz = 4.0f;  //  4Hz Data 250ms
-            else gpsHz = 1000.0f / (float)RealGPSDeltaTime;                           // Filter failed. Set GPS Hz by measurement
-            tmp0 = MagicEarthNumber * gpsHz;
+            INSusable           = true;                                         // INS is alive
+            GPS_speed_avg       = Do_Speedlist_Getavg(GPSrawspeedlist);
+            tmp0                = MagicEarthNumber * GetGPSHzFilter(RealGPSDeltaTime);
             Real_GPS_speed[LON] = (float)(Real_GPS_coord[LON] - Last_Real_GPS_coord[LON]) * tmp0 * CosLatScaleLon ; // cm/s
             Real_GPS_speed[LAT] = (float)(Real_GPS_coord[LAT] - Last_Real_GPS_coord[LAT]) * tmp0;                   // cm/s
             for (i = 0; i < 2; i++)
@@ -125,7 +146,7 @@ void GPS_calc_velocity(void)                                                    
     if (INSusable) for (i = 0; i < 2; i++) MIX_speed[i] = (ACC_speed[i] + Real_GPS_speed[i]) * 0.5f;
     else
     {
-        ResetGPSavgSpeed(GPSrawspeedlist);                                      // This will also be the initrun
+        Clear_GPSspeed_list(GPSrawspeedlist);                                   // This will also be the initrun
         GPS_reset_nav();                                                        // Ins is not possible, reset stuff
     }
 }

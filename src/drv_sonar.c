@@ -163,8 +163,8 @@ void Sonar_init(void)                                           // 0 = PWM56, 1 
 
 static bool Snr_HDWinit(void)                                   // Note Warmup delays deleted since blocking Gyrocal is done before
 {
-	uint8_t          buf[2];                                    // Dummy for i2c testread
-	bool             temp;
+    uint8_t          buf[2];                                    // Dummy for i2c testread
+    bool             temp;
     gpio_config_t    gpio;
     EXTI_InitTypeDef EXTIInit;
 
@@ -284,8 +284,8 @@ static bool SRF_get_i2c_distance(volatile int32_t *distance)
         temp      = (int16_t)((buf[0] << 8) | buf[1]);
         *distance = (int32_t)temp;
         calltime  = micros();
-    	i2cWrite(SONARSRF_ADDRESS, SONARSRF_CMDREG, SONARSRF_COMMAND);// restart ranging
-	  }
+        i2cWrite(SONARSRF_ADDRESS, SONARSRF_CMDREG, SONARSRF_COMMAND);// restart ranging
+    }
     else *distance = 0;                                         // Error, Sonar not responding
     return true;                                                // Always return true when time is up, even with errorvalue of 0
 }
