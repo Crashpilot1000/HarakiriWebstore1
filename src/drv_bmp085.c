@@ -22,7 +22,7 @@ typedef struct
 #define BOSCH_PRESSURE_BMP085   85
 #define BMP085_CHIP_ID_REG      0xD0
 #define BMP085_VERSION_REG      0xD1
-#define BMP085_PROM_START__ADDR 0xaa
+#define BMP085_PROM_START__ADDR 0xAA
 #define BMP085_PROM_DATA__LEN   22
 #define BMP085_T_MEASURE        0x2E                                             // temperature measurent
 #define BMP085_P_MEASURE        0x34                                             // pressure measurement

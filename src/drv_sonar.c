@@ -202,9 +202,9 @@ static bool Snr_HDWinit(void)                                   // Note Warmup d
         return i2cRead(SONARSRF_ADDRESS, SONARSRF_DISTANCE_HIGH, 2, buf);// End this here with dummyread to get ack
     case 6:                                                     // case sonar_i2cMBX Deal with I2C I2CXL sonar
         i2cFastSpeed(false);                                    // set I2C Standard mode
-        i2cWrite(SONARMBX_ADDRESS, 0xff, SONARMBX_COMMAND);     // start ranging
+        i2cWrite(SONARMBX_ADDRESS, 0xFF, SONARMBX_COMMAND);     // start ranging
         delay(70);                                              // sleep for 70ms to finish ranging
-        temp = i2cRead(SONARMBX_ADDRESS, 0xff, 2, buf);         // End this here with dummyread to get ack
+        temp = i2cRead(SONARMBX_ADDRESS, 0xFF, 2, buf);         // End this here with dummyread to get ack
         i2cFastSpeed(true);                                     // set I2C I2C Fast mode
         return (temp);
     }
@@ -299,13 +299,13 @@ static bool MBX_get_i2c_distance(volatile int32_t *distance)
     if(current_time < (last_measurement + MBi2cCycle)) return false; // Wait till ranging is finished
     last_measurement = current_time;
     CheckDisconnect();
-    i2cFastSpeed(false);                                         // set I2C Standard mode
-    if(i2cRead(SONARMBX_ADDRESS, 0xff, 2, buf))
+    i2cFastSpeed(false);                                        // set I2C Standard mode
+    if(i2cRead(SONARMBX_ADDRESS, 0xFF, 2, buf))
     {
         temp      = (int16_t)((buf[0] << 8) | buf[1]);
         *distance = (int32_t)temp;
         calltime  = micros();
-    	i2cWrite(SONARMBX_ADDRESS, 0xff, SONARMBX_COMMAND);     // restart ranging
+    	i2cWrite(SONARMBX_ADDRESS, 0xFF, SONARMBX_COMMAND);       // restart ranging
 	  }
     else *distance = 0;                                         // Error, Sonar not responding
     i2cFastSpeed(true);                                         // set I2C I2C Fast mode

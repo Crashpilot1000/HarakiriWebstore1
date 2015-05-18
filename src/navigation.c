@@ -104,12 +104,13 @@ void GPS_calc_velocity(void)                                                    
             }
             if (GPSrawspeedlistDivisor) GPS_speed_avg = GPSrawspeedlistSum / GPSrawspeedlistDivisor;
             else                        GPS_speed_avg = GPSSpeedErrorVal;
-            gpsHz = 1000.0f / (float)RealGPSDeltaTime;                          // Set GPS Hz, try to filter below
-            if (RealGPSDeltaTime >  10 && RealGPSDeltaTime <  30) gpsHz = 50.0f;// 50Hz Data  20ms filter out timejitter
-            if (RealGPSDeltaTime >  40 && RealGPSDeltaTime <  60) gpsHz = 20.0f;// 20Hz Data  50ms filter out timejitter
-            if (RealGPSDeltaTime >  80 && RealGPSDeltaTime < 120) gpsHz = 10.0f;// 10Hz Data 100ms filter out timejitter
-            if (RealGPSDeltaTime > 180 && RealGPSDeltaTime < 220) gpsHz = 5.0f; //  5Hz Data 200ms
-            if (RealGPSDeltaTime > 230 && RealGPSDeltaTime < 270) gpsHz = 4.0f; //  4Hz Data 250ms
+
+            if      (RealGPSDeltaTime >  18 && RealGPSDeltaTime <  22) gpsHz = 50.0f; // 50Hz Data  20ms filter out timejitter
+            else if (RealGPSDeltaTime >  45 && RealGPSDeltaTime <  55) gpsHz = 20.0f; // 20Hz Data  50ms filter out timejitter
+            else if (RealGPSDeltaTime >  90 && RealGPSDeltaTime < 110) gpsHz = 10.0f; // 10Hz Data 100ms filter out timejitter
+            else if (RealGPSDeltaTime > 180 && RealGPSDeltaTime < 220) gpsHz = 5.0f;  //  5Hz Data 200ms
+            else if (RealGPSDeltaTime > 225 && RealGPSDeltaTime < 275) gpsHz = 4.0f;  //  4Hz Data 250ms
+            else gpsHz = 1000.0f / (float)RealGPSDeltaTime;                           // Filter failed. Set GPS Hz by measurement
             tmp0 = MagicEarthNumber * gpsHz;
             Real_GPS_speed[LON] = (float)(Real_GPS_coord[LON] - Last_Real_GPS_coord[LON]) * tmp0 * CosLatScaleLon ; // cm/s
             Real_GPS_speed[LAT] = (float)(Real_GPS_coord[LAT] - Last_Real_GPS_coord[LAT]) * tmp0;                   // cm/s
