@@ -305,8 +305,8 @@ static bool MBX_get_i2c_distance(volatile int32_t *distance)
         temp      = (int16_t)((buf[0] << 8) | buf[1]);
         *distance = (int32_t)temp;
         calltime  = micros();
-    	i2cWrite(SONARMBX_ADDRESS, 0xFF, SONARMBX_COMMAND);       // restart ranging
-	  }
+        i2cWrite(SONARMBX_ADDRESS, 0xFF, SONARMBX_COMMAND);     // restart ranging
+    }
     else *distance = 0;                                         // Error, Sonar not responding
     i2cFastSpeed(true);                                         // set I2C I2C Fast mode
     return true;                                                // Always return true when time is up, even with errorvalue of 0

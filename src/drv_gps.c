@@ -118,16 +118,16 @@ typedef struct
 
 enum
 {
-    PREAMBLE1            = 0xb5,
+    PREAMBLE1            = 0xB5,
     PREAMBLE2            = 0x62,
     CLASS_NAV            = 0x01,
     CLASS_ACK            = 0x05,
     CLASS_CFG            = 0x06,
     MSG_ACK_NACK         = 0x00,
     MSG_ACK_ACK          = 0x01,
-    MSG_POSLLH           = 0x2,
-    MSG_STATUS           = 0x3,
-    MSG_SOL              = 0x6,
+    MSG_POSLLH           = 0x02,
+    MSG_STATUS           = 0x03,
+    MSG_SOL              = 0x06,
     MSG_VELNED           = 0x12,
     MSG_SVINFO           = 0x30,
     MSG_CFG_PRT          = 0x00,
@@ -340,13 +340,13 @@ static bool GPS_MTK_newFrame(uint8_t data)                                      
     static  uint8_t  pstep, lastbyte, LSLshifter,chkA, count, satn, fixtype;
     static  uint32_t lat, lon, alt, grspeed, grcourse;                              // MTK Dataset use unsigned for shiftoperation here
     int32_t tmp32     = 0;
-    uint8_t startbyte = 0xd1;                                                       // Set default for 1.9 FW
+    uint8_t startbyte = 0xD1;                                                       // Set default for 1.9 FW
     bool    parsed    = false;
 
     if(!pstep)
     {
-        if (cfg.gps_type == 2) startbyte = 0xd0;                                    // 3drobotics 1.6 FW and clones have $d0 preamblebyte not d1
-        if (data == 0xdd && lastbyte == startbyte) pstep = 100;                     // Detect Sync "0xD1,0xDD" Only search for Sync when not already decoding
+        if (cfg.gps_type == 2) startbyte = 0xD0;                                    // 3drobotics 1.6 FW and clones have $d0 preamblebyte not d1
+        if (data == 0xDD && lastbyte == startbyte) pstep = 100;                     // Detect Sync "0xD1,0xDD" Only search for Sync when not already decoding
     }
     lastbyte = data;
     switch(pstep)
@@ -469,7 +469,7 @@ static bool GPS_MTK_newFrame(uint8_t data)                                      
     case 15:                                                                        // Dataset RDY !! Cheksum B omitted, ChkA was OK
         if (fixtype > 1) GPS_FIX = true;
          else GPS_FIX = false;
-        if (startbyte == 0xd0)                                                      // We are dealing with old binary protocol here (*10 Error LAT/LON)
+        if (startbyte == 0xD0)                                                      // We are dealing with old binary protocol here (*10 Error LAT/LON)
         {
             lat *= 10;                                                              // so we have to multiply by 10 lat and lon
             lon *= 10;
