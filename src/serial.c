@@ -153,15 +153,15 @@ static void evaluateCommand(void)
         headSerialReply(0);
         break;
     case MSP_SET_RAW_GPS:
-        GPS_FIX             = read8();
-        GPS_numSat          = read8();
+        GPS_fix             = read8();
+        GPS_satnum          = read8();
         Real_GPS_coord[LAT] = read32();
         Real_GPS_coord[LON] = read32();
-        GPS_altitude        = read16();
+        GPS_alt             = read16();
         GPS_speed_raw       = read16();
         GPS_update         |= 2;                        // New data signalisation to GPS functions
         headSerialReply(0);
-        break;
+        break;  
     case MSP_SET_PID:
         for (i = 0; i < PIDITEMS; i++)
         {
@@ -256,11 +256,11 @@ static void evaluateCommand(void)
         break;
     case MSP_RAW_GPS:
         headSerialReply(14);
-        serialize8(GPS_FIX);
-        serialize8(GPS_numSat);
+        serialize8(GPS_fix);
+        serialize8(GPS_satnum);
         serialize32(Real_GPS_coord[LAT]);
         serialize32(Real_GPS_coord[LON]);
-        serialize16(GPS_altitude);
+        serialize16(GPS_alt);
         serialize16(GPS_speed_raw);
         break;
     case MSP_COMP_GPS:

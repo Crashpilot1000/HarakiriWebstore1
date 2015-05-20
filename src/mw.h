@@ -37,6 +37,17 @@ typedef struct stdev_t
 } stdev_t;
 
 // Serial GPS only variables
+typedef struct gpsirqraw_t
+{
+    int32_t  coord[2];                      // They occure serial IRQ is done, and they are fed to Real_GPS_coord synchronized
+    uint16_t speed;                         // cm/s
+    uint16_t grcrs;                         // 0-3600 Deg
+    bool     fix;                           // 3D fix true?
+    uint8_t  numSat;
+    uint16_t alt;                           // in meter
+    uint32_t timestamp;
+} gpsirqraw_t;
+
 typedef enum NavigationMode
 {
     NAV_MODE_NONE = 0,
@@ -522,19 +533,16 @@ extern int16_t  ESCnoFlyThrottle;
 extern bool     ForceRCExpInit;
 
 // GPS stuff
-extern volatile int32_t  IRQGPS_coord[2];   // They occure serial IRQ is done, and they are fed to Real_GPS_coord synchronized, so no uneval. rawdata pop up suddenly
-extern volatile uint16_t IRQGPS_speed;
-extern volatile uint16_t IRQGPS_grcrs;
-extern volatile bool GPS_FIX;
 extern int32_t  Real_GPS_coord[2];          // RAW GPS Coords
 extern int32_t  GPS_home[2];
 extern int32_t  GPS_WP[2];                  // Currently used WP
-extern volatile uint8_t GPS_numSat;
 extern uint32_t GPS_distanceToHome;         // distance to home
 extern int32_t  GPS_directionToHome;        // direction to home
 extern uint16_t GPS_speed_raw;              // speed in cm/s
 extern uint16_t GPS_speed_avg;              // speed in cm/s averaged by moving avg with 6 elements
-extern volatile uint16_t GPS_altitude;      // altitude in m
+extern uint8_t  GPS_satnum;
+extern uint16_t GPS_alt;
+extern bool     GPS_fix;
 extern uint8_t  GPS_update;                 // it's a binary toogle to distinct a GPS position update
 extern float    GPS_angle[2];               // it's the angles that must be applied for GPS correction
 extern float    Last_GPS_angle[2];
@@ -556,7 +564,7 @@ extern bool     BlockThrottle;
 extern bool     BlockPitch;
 extern bool     BlockRoll;
 extern float    StickGPSProp;               // 1.0f = no override, 0.0f = maximal override
-extern volatile uint32_t TimestampNewGPSdata; // Crashpilot in micros
+extern volatile gpsirqraw_t GPSirq;
 extern int32_t  target_bearing;             // target_bearing is where we should be heading
 extern uint32_t wp_distance;
 extern float    waypoint_speed_gov;         // used for slow speed wind up when start navigation;

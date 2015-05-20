@@ -20,7 +20,7 @@ static void GPS_HzSandbox(void);
 bool GPS_alltime(void)
 {
     bool result;
-    if (GPS_FIX && GPS_numSat >= 5)                                             // Do gps stuff with at least 5 Sats
+    if (GPS_fix && GPS_satnum >= 5)                                             // Do gps stuff with at least 5 Sats
     {
         GPS_calc_velocity();                                                    // Heart of the gps ins, called every time
         GPS_HzSandbox();                                                        // Just in case we want a Hz sandbox here in the future

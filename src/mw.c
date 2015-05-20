@@ -54,21 +54,17 @@ bool     ForceRCExpInit = true;
 // **********************
 // GPS
 // **********************
-volatile int32_t  IRQGPS_coord[2];                                   // They occure serial IRQ is done, and they are fed to Real_GPS_coord synchronized
-volatile uint16_t IRQGPS_speed;
-volatile uint16_t IRQGPS_grcrs;
-volatile bool     GPS_FIX = false;
-volatile uint8_t  GPS_numSat;
-volatile uint16_t GPS_altitude;                                      // altitude in m
-
-int32_t  Real_GPS_coord[2] = {GPSLatLonErrorVal, GPSLatLonErrorVal}; // RAW GPS Coords
-int32_t  GPS_home[2]       = {GPSLatLonErrorVal, GPSLatLonErrorVal};
-int32_t  GPS_WP[2]         = {GPSLatLonErrorVal, GPSLatLonErrorVal}; // Currently used WP
+int32_t  Real_GPS_coord[2]   = {GPSLatLonErrorVal, GPSLatLonErrorVal}; // RAW GPS Coords
+int32_t  GPS_home[2]         = {GPSLatLonErrorVal, GPSLatLonErrorVal};
+int32_t  GPS_WP[2]           = {GPSLatLonErrorVal, GPSLatLonErrorVal}; // Currently used WP
 uint32_t GPS_distanceToHome  = GPSDistErrorVal;                      // distance to home
 uint16_t GPS_ground_course   = GPSBearingErrorVal;                   // DEG * 10
 int32_t  GPS_directionToHome = GPSBearingErrorVal;                   // direction to home or hol point in degrees
 uint16_t GPS_speed_raw       = GPSSpeedErrorVal;                     // speed in cm/s
 uint16_t GPS_speed_avg       = GPSSpeedErrorVal;                     // speed in cm/s averaged by moving avg with 6 elements
+uint8_t  GPS_satnum;
+uint16_t GPS_alt;
+bool     GPS_fix;
 uint8_t  GPS_update = 0;                                             // it's a binary toogle to distinct a GPS position update
 float    GPS_angle[2]      = {0, 0};                                 // it's the angles that must be applied for GPS correction
 float    Last_GPS_angle[2] = {0, 0};
@@ -222,7 +218,7 @@ void loop(void)
             rcData[THROTTLE] = cfg.rc_mid;                                  // Put throttlestick to middle: Althold
             PHminSat = 5;                                                   // Sloppy PH is sufficient
             if (!RTLstate) RTLstate = 1;                                    // Start RTL Sequence if it isn't already running
-            if (GPS_numSat < 5) RTLstate = 0;                               // Error!
+            if (GPS_satnum < 5) RTLstate = 0;                               // Error!
             if (cfg.rtl_mnd && RTLstate == 1 && GPS_distanceToHome < cfg.rtl_mnd)
                 RTLstate = 0;                                               // Dont Do RTL if too close and RTL not already running
 
@@ -376,7 +372,7 @@ void loop(void)
         }
 #endif
 
-        if (sensors(SENSOR_GPS) && GPS_FIX && GPS_numSat >= 5)
+        if (sensors(SENSOR_GPS) && GPS_fix && GPS_satnum >= 5)
         {
             if (rcOptions[BOXGPSHOME] && f.GPS_FIX_HOME)                        // Crashpilot RTH is possible with 5 Sats for emergency and if homepos is set!
             {
@@ -389,7 +385,7 @@ void loop(void)
             }
             else f.GPS_HOME_MODE = 0;
 
-            if (rcOptions[BOXGPSHOLD] && GPS_numSat >= PHminSat)                // Crashpilot Only do poshold with specified Satnr or more
+            if (rcOptions[BOXGPSHOLD] && GPS_satnum >= PHminSat)                // Crashpilot Only do poshold with specified Satnr or more
             {
                 if (!f.GPS_HOLD_MODE)
                 {
@@ -1725,7 +1721,7 @@ static void DoLEDandBUZZER(void)
     if (currentTimeMS >= Timebase)                                          // GPS Blink sats, Indicate rdy to fly, Show Angle/Horizon in flight (if no gps sats)
     {
         Timebase = currentTimeMS + 10;                                      // Timebase 10 ms = ca 100Hz
-        if (sensors(SENSOR_GPS) && GPS_FIX && GPS_numSat >= 5) DoRedSatCnt = true; // Satcount overrides everything
+        if (sensors(SENSOR_GPS) && GPS_fix && GPS_satnum >= 5) DoRedSatCnt = true; // Satcount overrides everything
         else
         {
             if (!f.ARMED)
@@ -1745,7 +1741,7 @@ static void DoLEDandBUZZER(void)
             switch(blinkcase)
             {
             case 0:                                                         // Case new blinkblock
-                blinkblock = GPS_numSat - 4;                                // Change suggested by Hinkel So 5 Sats will blink one time
+                blinkblock = GPS_satnum - 4;                                // Change suggested by Hinkel So 5 Sats will blink one time
                 rdycase = 0;
             case 1:
                 cnt = 30;                                                   // 300 ms on

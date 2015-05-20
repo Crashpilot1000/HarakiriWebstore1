@@ -165,14 +165,14 @@ void DoChkGPSDeadin50HzLoop(void)                                               
 {
     static uint8_t  cnt = 0;
     static uint32_t LastGPSTS = 0;
-    if (!LastGPSTS) LastGPSTS = TimestampNewGPSdata;                                // if TimestampNewGPSdata is 0 we will be here again soon
+    if (!LastGPSTS) LastGPSTS = GPSirq.timestamp;                                   // if GPSirq.timestamp is 0 we will be here again soon
     else
     {
-        if (TimestampNewGPSdata == LastGPSTS) cnt++;
+        if (GPSirq.timestamp == LastGPSTS) cnt++;
         else
         {
             cnt = 0;
-            LastGPSTS = TimestampNewGPSdata;
+            LastGPSTS = GPSirq.timestamp;
         }
         if (cnt == 75) sensorsClear(SENSOR_GPS);                                    // No Data for 1.5 secs?
     }
@@ -180,13 +180,13 @@ void DoChkGPSDeadin50HzLoop(void)                                               
 
 static void GPS_NewData(uint16_t c)                                                 // Called by uart2Init interrupt
 {
-    static int32_t  LatSpikeTab[5], LonSpikeTab[5];
-    static bool     FilterCleared = false;
-    uint8_t         i;
+    static int32_t LatSpikeTab[5], LonSpikeTab[5];
+    static bool    FilterCleared = false;
+    uint8_t        i;
 
     if (GPS_newFrame(c))
     {
-        if(!GPS_FIX)                                                                // Don't fill spikefilter with pure shit
+        if(!GPSirq.fix)                                                             // Don't fill spikefilter with pure shit
         {
             if(!FilterCleared)
             {
@@ -201,15 +201,15 @@ static void GPS_NewData(uint16_t c)                                             
         else                                                                        // We have a fix. Can and shall we use Spikefiltervalues?
         {
             FilterCleared = false;
-            FiveElementSpikeFilterINT32(IRQGPS_coord[LAT], LatSpikeTab);            // Feed filter to have data when needed
-            FiveElementSpikeFilterINT32(IRQGPS_coord[LON], LonSpikeTab);
-            if (LatSpikeTab[2] && LonSpikeTab[2] && GPS_numSat < 6)                 // Filter when doubtful satnumber
+            FiveElementSpikeFilterINT32(GPSirq.coord[LAT], LatSpikeTab);            // Feed filter to have data when needed
+            FiveElementSpikeFilterINT32(GPSirq.coord[LON], LonSpikeTab);
+            if (LatSpikeTab[2] && LonSpikeTab[2] && GPSirq.numSat < 6)              // Filter when doubtful satnumber
             {
-                IRQGPS_coord[LAT] = LatSpikeTab[2];
-                IRQGPS_coord[LON] = LonSpikeTab[2];
+                GPSirq.coord[LAT] = LatSpikeTab[2];
+                GPSirq.coord[LON] = LonSpikeTab[2];
             }
         }
-        TimestampNewGPSdata = millis();                                             // Set timestamp of Data arrival in MS
+        GPSirq.timestamp = millis();                                                // Set timestamp of Data arrival in MS
     }
 }
 
@@ -467,19 +467,19 @@ static bool GPS_MTK_newFrame(uint8_t data)                                      
         }
         break;
     case 15:                                                                        // Dataset RDY !! Cheksum B omitted, ChkA was OK
-        if (fixtype > 1) GPS_FIX = true;
-         else GPS_FIX = false;
+        if (fixtype > 1) GPSirq.fix = true;
+         else GPSirq.fix = false;
         if (startbyte == 0xD0)                                                      // We are dealing with old binary protocol here (*10 Error LAT/LON)
         {
             lat *= 10;                                                              // so we have to multiply by 10 lat and lon
             lon *= 10;
         }
-        IRQGPS_coord[LAT] = (int32_t)lat;
-        IRQGPS_coord[LON] = (int32_t)lon;
-        GPS_altitude      = alt;
-        IRQGPS_speed      = grspeed;
-        IRQGPS_grcrs      = grcourse / 10;                                          // /10 to get deg * 10 according docu
-        GPS_numSat        = satn;
+        GPSirq.coord[LAT] = (int32_t)lat;
+        GPSirq.coord[LON] = (int32_t)lon;
+        GPSirq.alt        = alt;
+        GPSirq.speed      = grspeed;
+        GPSirq.grcrs      = grcourse / 10;                                          // /10 to get deg * 10 according docu
+        GPSirq.numSat     = satn;
         GPS_Present       = 1;                                                      // Show GPS is working
         parsed            = true;                                                   // RDY
         pstep             = 0;                                                      // Do nothing / Scan for sync
@@ -571,45 +571,25 @@ static bool GPS_NMEA_newFrame(char c)
             frame = 0;
             if (string[0] == 'G' && string[1] == 'P')
             {
-                if (string[2] == 'G' && string[3] == 'G' && string[4] == 'A')      frame = FRAME_GGA;
+                if      (string[2] == 'G' && string[3] == 'G' && string[4] == 'A') frame = FRAME_GGA;
                 else if (string[2] == 'R' && string[3] == 'M' && string[4] == 'C') frame = FRAME_RMC;
             }
         }
         else if (frame == FRAME_GGA)
         {
-            if (param == 2)
-            {
-                IRQGPS_coord[LAT] = GPS_coord_to_degrees(string);
-            }
-            else if (param == 3 && string[0] == 'S') IRQGPS_coord[LAT] = -IRQGPS_coord[LAT];
-            else if (param == 4)
-            {
-                IRQGPS_coord[LON] = GPS_coord_to_degrees(string);
-            }
-            else if (param == 5 && string[0] == 'W') IRQGPS_coord[LON] = -IRQGPS_coord[LON];
-            else if (param == 6)
-            {
-                GPS_FIX = (string[0] > '0');
-            }
-            else if (param == 7)
-            {
-                GPS_numSat = grab_fields(string, 0);
-            }
-            else if (param == 9)
-            {
-                GPS_altitude = grab_fields(string, 0);                              // altitude in meters added by Mis
-            }
+            if      (param == 2)                     GPSirq.coord[LAT] = GPS_coord_to_degrees(string);
+            else if (param == 3 && string[0] == 'S') GPSirq.coord[LAT] = -GPSirq.coord[LAT];
+            else if (param == 4)                     GPSirq.coord[LON] = GPS_coord_to_degrees(string);
+            else if (param == 5 && string[0] == 'W') GPSirq.coord[LON] = -GPSirq.coord[LON];
+            else if (param == 6)                     GPSirq.fix        = (string[0] > '0');
+            else if (param == 7)                     GPSirq.numSat     = grab_fields(string, 0);
+            else if (param == 9)                     GPSirq.alt        = grab_fields(string, 0); // altitude in meters added by Mis
+
         }
         else if (frame == FRAME_RMC)
         {
-            if (param == 7)
-            {
-                IRQGPS_speed = ((uint32_t)grab_fields(string, 1) * 5144) / 1000;    // gps speed in cm/s will be used for navigation
-            }
-            else if (param == 8)
-            {
-                IRQGPS_grcrs = grab_fields(string, 1);                              // ground course deg*10
-            }
+            if      (param == 7) GPSirq.speed = ((uint32_t)grab_fields(string, 1) * 5144) / 1000; // gps speed in cm/s will be used for navigation
+            else if (param == 8) GPSirq.grcrs = grab_fields(string, 1);                           // ground course deg*10
         }
         param++;
         offset = 0;
@@ -711,24 +691,24 @@ reset:
         switch (UBXmsgid)
         {
         case MSG_POSLLH:
-            IRQGPS_coord[LAT] = buffer.posllh.latitude;
-            IRQGPS_coord[LON] = buffer.posllh.longitude;
-            GPS_altitude = buffer.posllh.altitude_msl / 1000;                       // alt in m we don't buffer GPS_altitude since it not of importance
-            GPS_FIX = nextfx;
-            newpos    = true;
+            GPSirq.coord[LAT] = buffer.posllh.latitude;
+            GPSirq.coord[LON] = buffer.posllh.longitude;
+            GPSirq.alt        = buffer.posllh.altitude_msl / 1000;                  // alt in m
+            GPSirq.fix        = nextfx;
+            newpos            = true;
             break;
         case MSG_STATUS:
             nextfx = (buffer.status.fix_status & NAV_STATUS_FIX_VALID) && (buffer.status.fix_type == FIX_3D || buffer.status.fix_type == FIX_2D);
-            if (!nextfx) GPS_FIX = false;
+            if (!nextfx) GPSirq.fix = false;
             break;
         case MSG_SOL:
             nextfx = (buffer.solution.fix_status & NAV_STATUS_FIX_VALID) && (buffer.solution.fix_type == FIX_3D || buffer.solution.fix_type == FIX_2D);
-            if (!nextfx) GPS_FIX = false;
-            GPS_numSat = buffer.solution.satellites;                                // GPS_hdop = _buffer.solution.position_DOP;
+            if (!nextfx) GPSirq.fix = false;
+            GPSirq.numSat = buffer.solution.satellites;                             // GPS_hdop = _buffer.solution.position_DOP;
             break;
         case MSG_VELNED:
-            IRQGPS_speed = buffer.velned.speed_2d;                                  // cm/s speed_3d = _buffer.velned.speed_3d;  // cm/s
-            IRQGPS_grcrs = (uint16_t)(buffer.velned.heading_2d / 10000);            // Heading 2D deg * 100000 rescaled to deg * 10
+            GPSirq.speed = buffer.velned.speed_2d;                                  // cm/s speed_3d = _buffer.velned.speed_3d;  // cm/s
+            GPSirq.grcrs = (uint16_t)(buffer.velned.heading_2d / 10000);            // Heading 2D deg * 100000 rescaled to deg * 10
             newspd       = true;
             break;
         default:

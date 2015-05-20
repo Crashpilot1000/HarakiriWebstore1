@@ -76,7 +76,7 @@ void buzzer(uint8_t warn_vbat)
         if (failsafeCnt > (5 * cfg.fs_delay) && !f.ARMED) warn_failsafe = 2;        // tx turned off while motors are off: start "find me" signal
     }
 
-    if (sensors(SENSOR_GPS) && !GPS_FIX && (rcOptions[BOXGPSHOME] || rcOptions[BOXGPSHOLD] || rcOptions[BOXGPSAUTO]))
+    if (sensors(SENSOR_GPS) && !GPS_fix && (rcOptions[BOXGPSHOME] || rcOptions[BOXGPSHOLD] || rcOptions[BOXGPSAUTO]))
         warn_noGPSfix = 1;
 
     //===================== Priority driven Handling =====================

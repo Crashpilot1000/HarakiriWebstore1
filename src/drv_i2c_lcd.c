@@ -346,7 +346,7 @@ void OLED_Status(void)                                          // Not Time crit
     }
     i2c_OLED_PrintLineAtROW(line, 3);
 
-    if (FEATURE_GPS) sprintf(line, "SAT : %d   FIX : %d  ", GPS_numSat, GPS_FIX);
+    if (FEATURE_GPS) sprintf(line, "SAT : %d   FIX : %d  ", GPS_satnum, GPS_fix);
     else             sprintf(line, "SAT : -    FIX : -   ");
     i2c_OLED_PrintLineAtROW(line, 4);
 }

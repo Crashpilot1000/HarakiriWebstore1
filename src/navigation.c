@@ -43,7 +43,7 @@ static int16_t   maxbankbrake100 = 1;          // Maximum GPS Brake Tiltangle < 
 static float     Real_GPS_speed[2] = { 0, 0 }; // Is the earthframespeed measured by GPS Coord Difference
 static float     MIX_speed[2]      = { 0, 0 }; // That is a 1:1 Mix of Acc speed and GPS Earthframespeed
 static int32_t   Last_Real_GPS_coord[2];
-volatile uint32_t TimestampNewGPSdata;    // Crashpilot in micros
+volatile gpsirqraw_t GPSirq;
 
 // Earth / Location constants
 //static float     OneCmTo[2];              // Moves one cm in Gps coords
@@ -64,7 +64,7 @@ static uint16_t Do_Speedlist_Getavg(uint16_t *list)                             
     uint32_t        GPSrawspeedlistSum     = 0, GPSrawspeedlistDivisor = 0;
     uint8_t         i;
 
-    if (GPS_numSat < 5) list[GPSrawspeedlistElement] = GPSSpeedErrorVal;        // Speed far off below 5 sats
+    if (GPS_satnum < 5) list[GPSrawspeedlistElement] = GPSSpeedErrorVal;        // Speed far off below 5 sats
     else                list[GPSrawspeedlistElement] = GPS_speed_raw;
     GPSrawspeedlistElement++;
     if (GPSrawspeedlistElement == NumberOfSpeedListEntries) GPSrawspeedlistElement = 0;
@@ -117,8 +117,8 @@ void GPS_calc_velocity(void)                                                    
     uint8_t         i;
 
     GPS_calc_longitude_scaling(false);                                          // Init CosLatScaleLon if not already done to avoid div by zero etc..
-    RealGPSDeltaTime = TimestampNewGPSdata - LastTimestampNewGPSdata;           // RealGPSDeltaTime in ms! NOT us!
-    LastTimestampNewGPSdata = TimestampNewGPSdata;
+    RealGPSDeltaTime        = GPSirq.timestamp - LastTimestampNewGPSdata;       // RealGPSDeltaTime in ms! NOT us!
+    LastTimestampNewGPSdata = GPSirq.timestamp;
     if (RealGPSDeltaTime)                                                       // New GPS Data?
     {
         if (GPS_update) GPS_update = 0;                                         // Will change state every 2nd run. Blinks Mag Gui Ring
@@ -126,10 +126,13 @@ void GPS_calc_velocity(void)                                                    
         INSusable = false;                                                      // Set INS to ununsable in advance we will see later
         if (RealGPSDeltaTime < 400)                                             // In Time? 2,5Hz-XXHz
         {
-            Real_GPS_coord[LON] = IRQGPS_coord[LON];                            // Make Interrupt GPS coords available here and are IN TIME!
-            Real_GPS_coord[LAT] = IRQGPS_coord[LAT];                            // That makes shure they are synchronized and don't randomly appear in the code..
-            GPS_speed_raw       = IRQGPS_speed;
-            GPS_ground_course   = IRQGPS_grcrs;
+            Real_GPS_coord[LON] = GPSirq.coord[LON];                            // Make Interrupt GPS coords public available here and are IN TIME!
+            Real_GPS_coord[LAT] = GPSirq.coord[LAT];                            // That makes shure they are synchronized and don't randomly appear in the code..
+            GPS_speed_raw       = GPSirq.speed;
+            GPS_ground_course   = GPSirq.grcrs;
+            GPS_fix             = GPSirq.fix;               
+            GPS_satnum          = GPSirq.numSat;
+            GPS_alt             = GPSirq.alt;
             INSusable           = true;                                         // INS is alive
             GPS_speed_avg       = Do_Speedlist_Getavg(GPSrawspeedlist);
             tmp0                = MagicEarthNumber * GetGPSHzFilter(RealGPSDeltaTime);
@@ -142,7 +145,7 @@ void GPS_calc_velocity(void)                                                    
             }
         }
     }                                                                           // End of X Hz Loop
-    if ((millis() - TimestampNewGPSdata) > 500) INSusable = false;              // INS is NOT OK, too long (500ms) no correction
+    if ((millis() - GPSirq.timestamp) > 500) INSusable = false;                 // INS is NOT OK, too long (500ms) no correction
     if (INSusable) for (i = 0; i < 2; i++) MIX_speed[i] = (ACC_speed[i] + Real_GPS_speed[i]) * 0.5f;
     else
     {
