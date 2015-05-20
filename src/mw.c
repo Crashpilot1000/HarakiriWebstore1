@@ -65,7 +65,7 @@ uint16_t GPS_speed_avg       = GPSSpeedErrorVal;                     // speed in
 uint8_t  GPS_satnum;
 uint16_t GPS_alt;
 bool     GPS_fix;
-uint8_t  GPS_update = 0;                                             // it's a binary toogle to distinct a GPS position update
+uint8_t  GPS_update;                                                 // does a roll over count up on gps update
 float    GPS_angle[2]      = {0, 0};                                 // it's the angles that must be applied for GPS correction
 float    Last_GPS_angle[2] = {0, 0};
 float    nav[2]     = {0, 0};                                        // DEG * 100

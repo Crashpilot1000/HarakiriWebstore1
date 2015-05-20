@@ -543,7 +543,7 @@ extern uint16_t GPS_speed_avg;              // speed in cm/s averaged by moving 
 extern uint8_t  GPS_satnum;
 extern uint16_t GPS_alt;
 extern bool     GPS_fix;
-extern uint8_t  GPS_update;                 // it's a binary toogle to distinct a GPS position update
+extern uint8_t  GPS_update;                 // does a roll over count up on gps update
 extern float    GPS_angle[2];               // it's the angles that must be applied for GPS correction
 extern float    Last_GPS_angle[2];
 extern uint16_t GPS_ground_course;          // degrees*10

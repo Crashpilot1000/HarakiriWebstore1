@@ -121,8 +121,7 @@ void GPS_calc_velocity(void)                                                    
     LastTimestampNewGPSdata = GPSirq.timestamp;
     if (RealGPSDeltaTime)                                                       // New GPS Data?
     {
-        if (GPS_update) GPS_update = 0;                                         // Will change state every 2nd run. Blinks Mag Gui Ring
-        else GPS_update = 1;
+        GPS_update++;                                                           // Roll over counter for gui blinking ring
         INSusable = false;                                                      // Set INS to ununsable in advance we will see later
         if (RealGPSDeltaTime < 400)                                             // In Time? 2,5Hz-XXHz
         {
