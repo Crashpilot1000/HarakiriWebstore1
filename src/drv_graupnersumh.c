@@ -20,7 +20,6 @@ void graupnersumhInit(void)
     uart2Init(115200, graupnersumhDataReceive, true);
 }
 
-
 static void graupnersumhDataReceive(uint16_t c)
 {
     uint32_t gsumTime;
@@ -52,7 +51,7 @@ uint16_t graupnersumhReadRawRC(uint8_t chan)
 {
     uint16_t data;
     static uint32_t gsumChannelData[GSUM_MAX_CHANNEL];
-    static uint8_t gsumRcChannelMap[GSUM_MAX_CHANNEL] = {1,2,3,0,4,5,6,7};
+    static uint8_t gsumRcChannelMap[GSUM_MAX_CHANNEL] = {1, 2, 3, 0, 4, 5, 6, 7};
     uint8_t b;
     if (rcFrameComplete)
     {
@@ -60,7 +59,7 @@ uint16_t graupnersumhReadRawRC(uint8_t chan)
         {
             for (b = 0; b < GSUM_MAX_CHANNEL; b++)
             {
-                gsumChannelData[b] = (((uint32_t)(gsumFrame[(b << 1) + 3]) << 8) + gsumFrame[(b << 1) + 4]) / 6.4 - 375;
+                gsumChannelData[b] = (((((uint32_t)(gsumFrame[(b << 1) + 3]) << 8) + gsumFrame[(b << 1) + 4]) * 10) >> 6) - 375;
             }
         }
         rcFrameComplete = false;

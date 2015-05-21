@@ -152,15 +152,17 @@ static void evaluateCommand(void)
         for (i = 0; i < 8; i++) rcDataSAVE[i] = read16();
         headSerialReply(0);
         break;
-    case MSP_SET_RAW_GPS:                               // This enables GPS data to be externally fed
-        GPSirq.fix        = read8();
-        GPSirq.numSat     = read8();
-        GPSirq.coord[LAT] = read32();
+    case MSP_SET_RAW_GPS:                               // This potentially enables GPS data to be externally fed
+/*      
+        GPSirq.fix        = read8();                    // This will not work unless a new gps_type like "msp" is programmed
+        GPSirq.numSat     = read8();                    // So it's useless now and excluded from compilation
+        GPSirq.coord[LAT] = read32();                   // maybe it will be done sometime when a purpose shows up..
         GPSirq.coord[LON] = read32();
         GPSirq.alt        = read16();
         GPSirq.speed      = read16();
         GPSirq.timestamp  = millis();                   // Set timestamp of Data arrival in MS
         GPS_update++;                                   // Has no real meaning anymore
+*/    
         headSerialReply(0);
         break;  
     case MSP_SET_PID:
