@@ -115,7 +115,7 @@ CFLAGS		 = $(ARCH_FLAGS) \
 		   $(addprefix -D,$(OPTIONS)) \
 		   $(addprefix -I,$(INCLUDE_DIRS)) \
 		   -Os \
-		   -Wall \
+		   -Wall -Wdouble-promotion \
 		   -ffunction-sections \
 		   -fdata-sections \
 		   -DSTM32F10X_MD \
@@ -192,4 +192,4 @@ help:
 	@echo "        make [TARGET=<target>] [OPTIONS=\"<options>\"]"
 	@echo ""
 	@echo "Valid TARGET values are: $(VALID_TARGETS)"
-	@echo "" 
+	@echo ""

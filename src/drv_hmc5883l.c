@@ -110,7 +110,7 @@ void hmc5883lInit(float *calGain)                               // THE RESULT IS
 
     for (i = 0; i < 3; i++)
     {
-        if(maggainok) calGain[i] = fabs(multiplier * SELF_TEST_GAUSS[i] / xyz_total[i]);
+        if(maggainok) calGain[i] = fabsf(multiplier * SELF_TEST_GAUSS[i] / xyz_total[i]);
         else calGain[i] = 1.0f;
     }
 }

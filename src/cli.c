@@ -1723,7 +1723,7 @@ bool baseflight_mavlink_send_paramlist(bool Reset)
         return true;                                    // Return status not relevant but true because the "Reset" was a success
     }
     AllowProtocolAutosense = false;                     // Block Autodetect during transmission
-    if(i < 0 || i > (VALUE_COUNT - 1)) return true;     // Done with error but DONE
+    if(i < 0 || i > ((int16_t)VALUE_COUNT - 1)) return true; // Done with error but DONE
     memset (buf, 0, 17);                                // Fill with 0 For Stringtermination
     tableptr = &valueTable[i];
     memcpy (buf, tableptr->name, min(strlen(tableptr->name), 16)); // Copy max 16 Bytes

@@ -247,7 +247,7 @@ void loop(void)
                 {
                     if (cfg.nav_tail_first) magHold = wrap_180((float)(GPS_directionToHome - 180));
                     else magHold = GPS_directionToHome;
-                    if(fabs(wrap_180(heading - magHold)) < 6.0f) RTLstate++; // Turns true, when in range of +-6 degrees
+                    if(fabsf(wrap_180(heading - magHold)) < 6.0f) RTLstate++; // Turns true, when in range of +-6 degrees
                 }
                 else RTLstate++;
                 break;
@@ -697,7 +697,7 @@ void loop(void)
                 }
             }                                                                   // End of X Hz Loop
             if (AutolandState || AutostartState || ph_status != PH_STATUS_NONE) BaroD = 0;// Don't do Throttle angle correction when autolanding/starting or during PH
-            if (ReduceBaroI) BaroI *= 1.0f - constrain_flt(fabs(AltHold - EstAlt) * 0.003f, 0.0f, 0.5f);// Reduce Variobrake
+            if (ReduceBaroI) BaroI *= 1.0f - constrain_flt(fabsf(AltHold - EstAlt) * 0.003f, 0.0f, 0.5f);// Reduce Variobrake
             tmp0flt = BaroP + BaroD - BaroI;
             if(tmp0flt < 0.0f) tmp0flt *= 0.9f;                                 // Reduce downpid to 90%
             rcCommand[THROTTLE] = constrain_int((int32_t)tmp0flt + initialThrottleHold, cfg.esc_min, cfg.esc_max);
@@ -1177,6 +1177,20 @@ int32_t abs_int(int32_t x)                                                      
     uint32_t mask = x >> 31;
     return (x + mask) ^ mask;
 }
+
+/*
+float abs_flt(float x)
+{
+    union
+    {
+        uint32_t i;
+        float    f;
+    } conv;
+    conv.f  = x;
+    conv.i &= 0x7FFFFFFF;
+    return conv.f;
+}
+*/
 
 /*
 ****************************************************************************

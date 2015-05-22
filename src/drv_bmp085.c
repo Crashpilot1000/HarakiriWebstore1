@@ -100,7 +100,7 @@ static float bmp085_calculate(void)
     tmp1  = (tmp3 * (float)bmp085.ac3 / 8192.0f) + (tmp4 * (float)bmp085.b1 / 65536.0f);
     tmp4  = ((float)bmp085.ac4 * (tmp1 * 0.25f + 32768.0f)) / 32768.0f;
     if(!tmp4) return 0.0f;
-    tmp3  = fabs(((bmp085_up - tmp2) * 100.0f) / tmp4) * 125.0f;
+    tmp3  = fabsf(((bmp085_up - tmp2) * 100.0f) / tmp4) * 125.0f;
     tmp2  = tmp3 * 0.00390625f;
     tmp1  = tmp2 * tmp2 * 0.04635620f + tmp3 * -0.11225891f;
     return tmp3 + (tmp1 + SMD500_PARAM_MI) * 0.0625f;

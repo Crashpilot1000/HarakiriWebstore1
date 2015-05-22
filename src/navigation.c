@@ -229,7 +229,7 @@ void GPS_calc_posholdCrashpilot(bool overspeed)
         maxbank100new = (float)maxbank100;
         if (overspeed)
         {
-            tmp1 = fabs(ACC_speed[axis]);
+            tmp1 = fabsf(ACC_speed[axis]);
             if (!tmp1) tmp1 = 1.0f;
             tmp0 = (float)cfg.gps_ph_settlespeed / tmp1;
             tmp1 = (float)cfg.gps_ph_minbrakepercent * 0.01f;                   // this is the minimal break percentage
@@ -318,7 +318,7 @@ void GPS_set_pids(void)                                                         
     navPID_PARAM.kD            = (float)cfg.D8[PIDNAVR] /  1000.0f;
     navPID_PARAM.Imax          = posholdPID_PARAM.Imax;
     
-    GPSRAWtoRAD                = 0.0000001f * M_PI / 180.0f;
+    GPSRAWtoRAD                = 0.0000001f * (float)M_PI / 180.0f;
 //    OneCmTo[LAT]               = 1.0f / MagicEarthNumber;                       // Moves North one cm
     maxbank10                  = (int16_t)cfg.gps_maxangle * 10;                // Initialize some values here
     maxbank100                 = (int16_t)cfg.gps_maxangle * 100;
@@ -345,7 +345,7 @@ static float get_D(float error, float *dt, struct PID_ *pid, struct PID_PARAM_ *
     static bool ini = false;
     if(!ini)
     {
-        GPSDptCut  = 0.5f / (M_PI * (float)cfg.gpscuthz);
+        GPSDptCut  = 0.5f / ((float)M_PI * (float)cfg.gpscuthz);
         ini = true;
     }
     pid->lastderivative += (*dt / ( GPSDptCut + *dt)) * (((error - pid->last_error) / *dt) - pid->lastderivative);
@@ -398,7 +398,7 @@ void GPS_calc_longitude_scaling(bool force)
     if (!ini)
     {
         ini  = true;
-        rads = fabs((float)Real_GPS_coord[LAT] * GPSRAWtoRAD);
+        rads = fabsf((float)Real_GPS_coord[LAT] * GPSRAWtoRAD);
         CosLatScaleLon = cosf(rads);                                            // can only be 0 at 90 degree, perhaps at the poles?
         if (!CosLatScaleLon) CosLatScaleLon = 0.001745328f;                     // Avoid divzero (value is cos of 89.9 Degree)
 //        OneCmTo[LON] = 1.0f / (MagicEarthNumber * CosLatScaleLon);              // Moves EAST one cm

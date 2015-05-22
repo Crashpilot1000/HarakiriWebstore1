@@ -383,7 +383,7 @@ void Baro_update(void)                                            // Note Pressu
         baro.get_up();                                            // Readout Pressure
         baroDeadline    = 0;                                      // Don't use delay between read. Cycletime is enough. Before: TimeNowMicros + baro.repeat_delay - 1;
         ActualPressure  = baro.calculate();                       // ActualPressure needed by mavlink
-        BaroSpikeTab[0] = (1.0f - pow(ActualPressure / 101325.0f, 0.190295f)) * 4433000.0f; // I stick to the "slower", method - gives better results.
+        BaroSpikeTab[0] = (1.0f - powf(ActualPressure / 101325.0f, 0.190295f)) * 4433000.0f; // I stick to the "slower", method - gives better results.
         BaroSpikeTab[4] = BaroSpikeTab[0];
         while(!rdy)                                               // Spikefilter now
         {
@@ -623,7 +623,7 @@ static void Mag_Calibration(void)                                 // Called from
     cfg.mag_calibrated = 1;
     for (i = 0; i < 3; i++)
     {
-        if (fabs(cfg.magZero[i]) > MAGerror)
+        if (fabsf(cfg.magZero[i]) > MAGerror)
         {
             cfg.mag_calibrated = 0;                               // Supress GPS functions & Guicrazymag
             cfg.magZero[i] = 0;          
