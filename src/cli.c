@@ -619,12 +619,14 @@ static void cliCMix(char *cmdline)
         uartPrint("Custom mixer: \r\nMotor\tThr\tRoll\tPitch\tYaw\r\n");
         for (motnum = 0; motnum < MAX_MOTORS; motnum++)
         {
-            if (!cfg.customMixer[motnum].throttle) break;
+            tmp[0] = cfg.customMixer[motnum].throttle;
+            tmp[1] = cfg.customMixer[motnum].roll;
+            tmp[2] = cfg.customMixer[motnum].pitch;
+            tmp[3] = cfg.customMixer[motnum].yaw;
+            if (!tmp[0]) return;
             printf("#%d:\t", motnum + 1);
-            printf("%s\t",   ftoa(Int16MixToFloat(cfg.customMixer[motnum].throttle), buf));
-            printf("%s\t",   ftoa(Int16MixToFloat(cfg.customMixer[motnum].roll)    , buf));
-            printf("%s\t",   ftoa(Int16MixToFloat(cfg.customMixer[motnum].pitch)   , buf));
-            printf("%s\r\n", ftoa(Int16MixToFloat(cfg.customMixer[motnum].yaw)     , buf));
+            for (i = 0; i < 4; i++) printf("%s\t", ftoa(Int16MixToFloat(tmp[i]), buf));
+            uartPrint("\r\n");
         }
         for (i = 0; i < 3; i++) tmp[i] = 0;                             // Fix by meister
         for (i = 0; i < motnum; i++)
