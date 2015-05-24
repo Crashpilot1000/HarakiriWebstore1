@@ -605,11 +605,6 @@ static void cliAuxset(char *cmdline)
     PrintoutAUX();
 }
 
-static int16_t FloatMixToInt16(float input)
-{
-    return constrain_int(SpecialIntegerRoundUp(input * MixerMultiply), -32767, 32767);
-}
-
 #define GoodMixThresh (int32_t)(MixerMultiply * 0.02f)                  // Mixersum for each axis should be "0" but we define a margin here that still lets the mixer be ok in the gui printout
 static void cliCMix(char *cmdline)
 {
@@ -674,7 +669,7 @@ static void cliCMix(char *cmdline)
             {
                 ptr = strchr(ptr, ' ');
                 if (!ptr) break;
-                tmp[paracnt] = FloatMixToInt16(_atof(++ptr));
+                tmp[paracnt] = constrain_int(SpecialIntegerRoundUp(_atof(++ptr) * MixerMultiply), -32767, 32767); // "FloatMixToInt16"
             }
             if (paracnt == 4)
             {
