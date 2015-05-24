@@ -613,13 +613,14 @@ static int16_t FloatMixToInt16(float input)
 #define GoodMixThresh (int32_t)(MixerMultiply * 0.02f)                  // Mixersum for each axis should be "0" but we define a margin here that still lets the mixer be ok in the gui printout
 static void cliCMix(char *cmdline)
 {
-    int32_t i, motnum, check = 0, mixsum[3];
+    int32_t i, motnum, paracnt, tmp[4];
     uint8_t len = strlen(cmdline);
     char    buf[16];
     char   *ptr;
 
     if (!len)
     {
+    PrintCmix:                                                          // could be a void printcurrentmix(void) as well but this is shorter
         uartPrint("Custom mixer: \r\nMotor\tThr\tRoll\tPitch\tYaw\r\n");
         for (motnum = 0; motnum < MAX_MOTORS; motnum++)
         {
@@ -630,19 +631,19 @@ static void cliCMix(char *cmdline)
             printf("%s\t",   ftoa(Int16MixToFloat(cfg.customMixer[motnum].pitch)   , buf));
             printf("%s\r\n", ftoa(Int16MixToFloat(cfg.customMixer[motnum].yaw)     , buf));
         }
-        for (i = 0; i < 3; i++) mixsum[i] = 0;                          // Fix by meister
+        for (i = 0; i < 3; i++) tmp[i] = 0;                             // Fix by meister
         for (i = 0; i < motnum; i++)
         {
-            mixsum[0] += cfg.customMixer[i].roll;
-            mixsum[1] += cfg.customMixer[i].pitch;
-            mixsum[2] += cfg.customMixer[i].yaw;
+            tmp[0] += cfg.customMixer[i].roll;                          // we only need 3 elements of the 4 in "tmp"
+            tmp[1] += cfg.customMixer[i].pitch;
+            tmp[2] += cfg.customMixer[i].yaw;
         }
         uartPrint("Sanity check:\t");
-        for (i = 0; i < 3; i++) uartPrint(abs_int(mixsum[i]) > GoodMixThresh ? "NG\t" : "OK\t");
+        for (i = 0; i < 3; i++) uartPrint(abs_int(tmp[i]) > GoodMixThresh ? "NG\t" : "OK\t");
         uartPrint("\r\n");
         return;
     }
-    else if (strncasecmp(cmdline, "load", 4) == 0)
+    else if (!strncasecmp(cmdline, "load", 4))
     {
         ptr = strchr(cmdline, ' ');
         if (ptr)
@@ -654,13 +655,11 @@ static void cliCMix(char *cmdline)
                 {
                     cliErrorMessage();                                  // uartPrint("Invalid mixer type...\r\n");
                     break;
-                }
-                if (strncasecmp(ptr, mixerNames[i], len) == 0)
+                } else if (!strncasecmp(ptr, mixerNames[i], len))
                 {
                     mixerLoadMix(i);
                     printf("Loaded %s mix...\r\n", mixerNames[i]);
-                    cliCMix("");
-                    break;
+                    goto PrintCmix;                                     // goto is used to save codesize and avoid recursion "cliCMix("");"
                 }
             }
         }
@@ -671,32 +670,21 @@ static void cliCMix(char *cmdline)
         i   = atoi(ptr) - 1;                                            // get motor number
         if (i >= 0 && i < MAX_MOTORS)
         {
-            ptr = strchr(ptr, ' ');
-            if (ptr)
+            for (paracnt = 0; paracnt < 4; paracnt++)
             {
-                cfg.customMixer[i].throttle = FloatMixToInt16(_atof(++ptr));
-                check++;
+                ptr = strchr(ptr, ' ');
+                if (!ptr) break;
+                tmp[paracnt] = FloatMixToInt16(_atof(++ptr));
             }
-            ptr = strchr(ptr, ' ');
-            if (ptr)
+            if (paracnt == 4)
             {
-                cfg.customMixer[i].roll     = FloatMixToInt16(_atof(++ptr));
-                check++;
+                cfg.customMixer[i].throttle = tmp[0];
+                cfg.customMixer[i].roll     = tmp[1];
+                cfg.customMixer[i].pitch    = tmp[2];
+                cfg.customMixer[i].yaw      = tmp[3];
+                goto PrintCmix;                                        // goto is used to save codesize and avoid recursion "cliCMix("");"
             }
-            ptr = strchr(ptr, ' ');
-            if (ptr)
-            {
-                cfg.customMixer[i].pitch    = FloatMixToInt16(_atof(++ptr));
-                check++;
-            }
-            ptr = strchr(ptr, ' ');
-            if (ptr)
-            {
-                cfg.customMixer[i].yaw      = FloatMixToInt16(_atof(++ptr));
-                check++;
-            }
-            if (check != 4) uartPrint("Invalid number of arguments\r\n");
-            else cliCMix("");
+            else uartPrint("Invalid number of arguments\r\n");
         }
         else printf("Motor nr not in range 1 - %d\r\n", MAX_MOTORS);
     }
@@ -875,7 +863,7 @@ void cliSave(char *cmdline)
 static void cliPrintVar(const clivalue_t *var, uint32_t full)
 {
     int32_t value = 0;
-    char buf[8];
+    char buf[16];                                                       // Reserve 32Bit more than 12Bytes. ftoa may need it
 
     switch (var->type)
     {
@@ -1520,36 +1508,36 @@ static void cliScanbus(char *cmdline)
             switch (address)
             {
             case MMA8452_ADDRESS:                       // Detection altered
-                strcpy(buf,"MMA8452");
+                strcpy(buf, "MMA8452");
                 break;
             case HMC5883L_ADDRESS:
-                strcpy(buf,"HMC5883L");
+                strcpy(buf, "HMC5883L");
                 break;
             case DaddyW_SONAR:                          // Summarize as "Sonar"
             case MBandSRF_ADDRESS:
-                strcpy(buf,"Sonar");
+                strcpy(buf, "Sonar");
                 break;
             case EagleTreePowerPanel:                   // Summarize as "Display"
             case OLD1_ADDRESS:
             case OLD2_ADDRESS:
-                strcpy(buf,"Display");
+                strcpy(buf, "Display");
                 break;
             case ADXL345_ADDRESS:                       // ADXL added
-                strcpy(buf,"ADXL345");
+                strcpy(buf, "ADXL345");
                 break;
             case BMA180_ADDRESS:                        // Sensor currently not supported by a driver
-                strcpy(buf,"BMA180");
+                strcpy(buf, "BMA180");
                 break;
             case MPU6050_ADDRESS:
-                if (L3G4200D) strcpy(buf,"L3G4200D");
-                else strcpy(buf,"MPU3050/MPU6050");
+                if (L3G4200D) strcpy(buf, "L3G4200D");
+                else strcpy(buf, "MPU3050/MPU6050");
                 break;
             case BMPandMS_ADDRESS:
-                if(msbaro) strcpy(buf,"MS5611");
-                else strcpy(buf,"BMP085");
+                if(msbaro) strcpy(buf, "MS5611");
+                else strcpy(buf, "BMP085");
                 break;
             default:                                    // Unknown case added
-                strcpy(buf,"UNKNOWN TO ME");
+                strcpy(buf, "UNKNOWN");
                 break;
             }
             printf(" probably %s \r\n",buf);
@@ -1591,16 +1579,16 @@ static void cliPassgps(char *cmdline)
         printf("Select Ublox Options\r\n\r\n");
         printf("0 No Options. All GPS\r\n");
         printf("1 UBX Force Sgnlstrngth\r\n");
-        printf("2 UBX 115K Baud\r\n");
-        printf("3 UBX  57K Baud\r\n");
-        printf("4 UBX  38K Baud\r\n");
-        printf("5 UBX  19K Baud\r\n\r\n");
-        if (HaveMTK) printf("Actual MTK 57K Baud.\r\n");// GPS_NMEA = 0, GPS_UBLOX = 1, GPS_MTK16 = 2, GPS_MTK19 = 3, GPS_UBLOX_DUMB = 4
+        printf("2 UBX 115K Bd\r\n");
+        printf("3 UBX  57K Bd\r\n");
+        printf("4 UBX  38K Bd\r\n");
+        printf("5 UBX  19K Bd\r\n\r\n");
+        if (HaveMTK) printf("Actual MTK 57K Bd.\r\n");// GPS_NMEA = 0, GPS_UBLOX = 1, GPS_MTK16 = 2, GPS_MTK19 = 3, GPS_UBLOX_DUMB = 4
         else
         {
             if (!cfg.gps_type) printf("Actual NMEA");
             else printf("Actual UBLOX");
-            printf(" %d Baud.\r\n", cfg.gps_baudrate);
+            printf(" %d Bd.\r\n", cfg.gps_baudrate);
         }
     }
     else
@@ -1639,10 +1627,10 @@ static void cliPassgps(char *cmdline)
 
         if(!HaveMTK)
         {
-            if (wantedbaud == cfg.gps_baudrate) printf("Keeping GPS Baud: %d.", wantedbaud);
+            if (wantedbaud == cfg.gps_baudrate) printf("Keeping GPS Bd: %d.", wantedbaud);
             else
             {
-                printf("Setting %d Baud.", wantedbaud);
+                printf("Setting %d Bd.", wantedbaud);
                 UbloxForceBaud(wantedbaud);
             }
         }

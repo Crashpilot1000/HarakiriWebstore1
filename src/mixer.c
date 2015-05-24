@@ -195,10 +195,8 @@ void mixerLoadMix(int index)
     int i;
     index++;                                                                      // we're 1-based
     for (i = 0; i < MAX_MOTORS; i++) cfg.customMixer[i].throttle = 0;             // clear existing
-    if (mixers[index].motor != NULL)                                              // do we have anything here to begin with?
-    {
-        for (i = 0; i < mixers[index].numberMotor; i++) cfg.customMixer[i] = mixers[index].motor[i];
-    }
+    if (!mixers[index].motor) return;                                             // do we have anything here to begin with?
+    for (i = 0; i < mixers[index].numberMotor; i++) cfg.customMixer[i] = mixers[index].motor[i];
 }
 
 void writeServos(void)
