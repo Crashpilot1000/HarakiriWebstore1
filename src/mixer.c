@@ -154,7 +154,6 @@ void mixerInit(void)
 {
     uint8_t i;
     int16_t yw = (int16_t)cfg.tri_ydir;
-    NumberOfMotors = 0;
     useServo = mixers[cfg.mixerConfiguration].useServo;                           // enable servos for mixes that require them. note, this shifts motor counts.
     if (feature(FEATURE_SERVO_TILT)) useServo = 1;                                // if we want camstab/trig, that also enables servos, even if mixer doesn't
 
@@ -167,8 +166,8 @@ void mixerInit(void)
             currentMixer[i].roll     = Int16MixToFloat(cfg.customMixer[i].roll);
             currentMixer[i].pitch    = Int16MixToFloat(cfg.customMixer[i].pitch);
             currentMixer[i].yaw      = Int16MixToFloat(cfg.customMixer[i].yaw * yw);// Do yaw direction here instead of every time in the mixer
-            NumberOfMotors++;
         }
+        NumberOfMotors = i;
     }
     else
     {

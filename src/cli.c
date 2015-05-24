@@ -610,14 +610,13 @@ static int16_t FloatMixToInt16(float input)
     return constrain_int(SpecialIntegerRoundUp(input * MixerMultiply), -32767, 32767);
 }
 
+#define GoodMixThresh (int32_t)(MixerMultiply * 0.02f)                  // Mixersum for each axis should be "0" but we define a margin here that still lets the mixer be ok in the gui printout
 static void cliCMix(char *cmdline)
 {
-    int i, check = 0;
-    int num_motors = 0;
+    int32_t i, check = 0, num_motors, mixsum[3];
     uint8_t len = strlen(cmdline);
-    char buf[16];
-    int32_t mixsum[3];
-    char *ptr;
+    char    buf[16];
+    char   *ptr;
 
     if (!len)
     {
@@ -625,16 +624,15 @@ static void cliCMix(char *cmdline)
         for (i = 0; i < MAX_MOTORS; i++)
         {
             if (!cfg.customMixer[i].throttle) break;
-
-            num_motors++;
             printf("#%d:\t", i + 1);
             printf("%s\t",   ftoa(Int16MixToFloat(cfg.customMixer[i].throttle), buf));
             printf("%s\t",   ftoa(Int16MixToFloat(cfg.customMixer[i].roll)    , buf));
             printf("%s\t",   ftoa(Int16MixToFloat(cfg.customMixer[i].pitch)   , buf));
             printf("%s\r\n", ftoa(Int16MixToFloat(cfg.customMixer[i].yaw)     , buf));
         }
+        num_motors = i;
+        
         for (i = 0; i < 3; i++) mixsum[i] = 0;                          // Fix by meister
-
         for (i = 0; i < num_motors; i++)
         {
             mixsum[0] += cfg.customMixer[i].roll;
@@ -642,8 +640,7 @@ static void cliCMix(char *cmdline)
             mixsum[2] += cfg.customMixer[i].yaw;
         }
         uartPrint("Sanity check:\t");
-        for (i = 0; i < 3; i++) uartPrint(abs_int(mixsum[i] >> MixerShift) > 0 ? "NG\t" : "OK\t"); // storagefactor
-
+        for (i = 0; i < 3; i++) uartPrint(abs_int(mixsum[i]) > GoodMixThresh ? "NG\t" : "OK\t");
         uartPrint("\r\n");
         return;
     }
@@ -673,8 +670,8 @@ static void cliCMix(char *cmdline)
     else
     {
         ptr = cmdline;
-        i = atoi(ptr);                                                  // get motor number
-        if (--i < MAX_MOTORS)
+        i   = atoi(ptr) - 1;                                            // get motor number
+        if (i >= 0 && i < MAX_MOTORS)
         {
             ptr = strchr(ptr, ' ');
             if (ptr)
@@ -700,7 +697,7 @@ static void cliCMix(char *cmdline)
                 cfg.customMixer[i].yaw      = FloatMixToInt16(_atof(++ptr));
                 check++;
             }
-            if (check != 4) uartPrint("Invalid arguments, needs idx thr roll pitch yaw\r\n");
+            if (check != 4) uartPrint("Invalid number of arguments\r\n");
             else cliCMix("");
         }
         else printf("Motor nr not in range 1 - %d\r\n", MAX_MOTORS);
