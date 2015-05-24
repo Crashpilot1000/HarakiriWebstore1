@@ -623,7 +623,7 @@ static void cliCMix(char *cmdline)
             tmp[1] = cfg.customMixer[motnum].roll;
             tmp[2] = cfg.customMixer[motnum].pitch;
             tmp[3] = cfg.customMixer[motnum].yaw;
-            if (!tmp[0]) return;
+            if (!tmp[0]) break;
             printf("#%d:\t", motnum + 1);
             for (i = 0; i < 4; i++) printf("%s\t", ftoa(Int16MixToFloat(tmp[i]), buf));
             uartPrint("\r\n");
