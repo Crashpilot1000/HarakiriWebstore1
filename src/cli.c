@@ -613,7 +613,7 @@ static int16_t FloatMixToInt16(float input)
 #define GoodMixThresh (int32_t)(MixerMultiply * 0.02f)                  // Mixersum for each axis should be "0" but we define a margin here that still lets the mixer be ok in the gui printout
 static void cliCMix(char *cmdline)
 {
-    int32_t i, check = 0, num_motors, mixsum[3];
+    int32_t i, motnum, check = 0, mixsum[3];
     uint8_t len = strlen(cmdline);
     char    buf[16];
     char   *ptr;
@@ -621,19 +621,17 @@ static void cliCMix(char *cmdline)
     if (!len)
     {
         uartPrint("Custom mixer: \r\nMotor\tThr\tRoll\tPitch\tYaw\r\n");
-        for (i = 0; i < MAX_MOTORS; i++)
+        for (motnum = 0; motnum < MAX_MOTORS; motnum++)
         {
-            if (!cfg.customMixer[i].throttle) break;
-            printf("#%d:\t", i + 1);
-            printf("%s\t",   ftoa(Int16MixToFloat(cfg.customMixer[i].throttle), buf));
-            printf("%s\t",   ftoa(Int16MixToFloat(cfg.customMixer[i].roll)    , buf));
-            printf("%s\t",   ftoa(Int16MixToFloat(cfg.customMixer[i].pitch)   , buf));
-            printf("%s\r\n", ftoa(Int16MixToFloat(cfg.customMixer[i].yaw)     , buf));
+            if (!cfg.customMixer[motnum].throttle) break;
+            printf("#%d:\t", motnum + 1);
+            printf("%s\t",   ftoa(Int16MixToFloat(cfg.customMixer[motnum].throttle), buf));
+            printf("%s\t",   ftoa(Int16MixToFloat(cfg.customMixer[motnum].roll)    , buf));
+            printf("%s\t",   ftoa(Int16MixToFloat(cfg.customMixer[motnum].pitch)   , buf));
+            printf("%s\r\n", ftoa(Int16MixToFloat(cfg.customMixer[motnum].yaw)     , buf));
         }
-        num_motors = i;
-        
         for (i = 0; i < 3; i++) mixsum[i] = 0;                          // Fix by meister
-        for (i = 0; i < num_motors; i++)
+        for (i = 0; i < motnum; i++)
         {
             mixsum[0] += cfg.customMixer[i].roll;
             mixsum[1] += cfg.customMixer[i].pitch;
