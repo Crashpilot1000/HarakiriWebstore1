@@ -533,7 +533,7 @@ static void cliAuxset(char *cmdline)
                 uartPrint(":");
                 for (k = 0; k < MaxAuxNumber; k++)
                 {
-                    strcpy(buf, "---");
+                    snprintf (buf, sizeof(buf), "---");
                     val   = cfg.activate[i];
                     val >>= k * 3;
                     if (val & 1) buf[0] = 'L';
@@ -575,17 +575,17 @@ static void cliAuxset(char *cmdline)
     {
     case 'L':
     case 'l':
-        strcpy(buf, "LOW ");
+        snprintf(buf, sizeof(buf), "LOW ");
         val <<= i;
         break;
     case 'M':
     case 'm':
-        strcpy(buf, "MED ");
+        snprintf(buf, sizeof(buf), "MED ");
         val <<= i + 1;
         break;
     case 'H':
     case 'h':
-        strcpy(buf, "HIGH");
+        snprintf(buf, sizeof(buf), "HIGH");
         val <<= i + 2;
         break;
     default:
@@ -1508,36 +1508,36 @@ static void cliScanbus(char *cmdline)
             switch (address)
             {
             case MMA8452_ADDRESS:                       // Detection altered
-                strcpy(buf, "MMA8452");
+                snprintf(buf, sizeof(buf), "MMA8452");
                 break;
             case HMC5883L_ADDRESS:
-                strcpy(buf, "HMC5883L");
+                snprintf(buf, sizeof(buf), "HMC5883L");
                 break;
             case DaddyW_SONAR:                          // Summarize as "Sonar"
             case MBandSRF_ADDRESS:
-                strcpy(buf, "Sonar");
+                snprintf(buf, sizeof(buf), "Sonar");
                 break;
             case EagleTreePowerPanel:                   // Summarize as "Display"
             case OLD1_ADDRESS:
             case OLD2_ADDRESS:
-                strcpy(buf, "Display");
+                snprintf(buf, sizeof(buf), "Display");
                 break;
             case ADXL345_ADDRESS:                       // ADXL added
-                strcpy(buf, "ADXL345");
+                snprintf(buf, sizeof(buf), "ADXL345");
                 break;
             case BMA180_ADDRESS:                        // Sensor currently not supported by a driver
-                strcpy(buf, "BMA180");
+                snprintf(buf, sizeof(buf), "BMA180");
                 break;
             case MPU6050_ADDRESS:
-                if (L3G4200D) strcpy(buf, "L3G4200D");
-                else strcpy(buf, "MPU3050/MPU6050");
+                if (L3G4200D) snprintf(buf, sizeof(buf), "L3G4200D");
+                else snprintf(buf, sizeof(buf), "MPU3050/MPU6050");
                 break;
             case BMPandMS_ADDRESS:
-                if(msbaro) strcpy(buf, "MS5611");
-                else strcpy(buf, "BMP085");
+                if(msbaro) snprintf(buf, sizeof(buf), "MS5611");
+                else snprintf(buf, sizeof(buf), "BMP085");
                 break;
             default:                                    // Unknown case added
-                strcpy(buf, "UNKNOWN");
+                snprintf(buf, sizeof(buf), "UNKNOWN");
                 break;
             }
             printf(" probably %s \r\n",buf);
