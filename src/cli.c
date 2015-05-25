@@ -383,8 +383,10 @@ char *itoa(int i, char *a, int r)
 //
 // 09-May-2009 Tom Van Baak (tvb) www.LeapSecond.com
 // 06-May-2015 Crashpilot: Stripped down the Exponent part, since it's not used in this project
-#define white_space(c) ((c) == ' ' || (c) == '\t')
-#define valid_digit(c) ((c) >= '0' && (c) <= '9')
+//                         Added "#define decimal_point(c)"
+#define white_space(c)   ((c) == ' ' || (c) == '\t')
+#define valid_digit(c)   ((c) >= '0' && (c) <= '9')
+#define decimal_point(c) ((c) == '.' || (c) == ',')                     // also accept "," like on numblock :)
 static float _atof(const char *p)
 {
     float value = 0.0f, sign = 1.0f, pow10 = 10.0f;
@@ -401,7 +403,7 @@ static float _atof(const char *p)
         value = value * 10.0f + (*p - '0');
         p++;
     }
-    if (*p == '.')                                                      // Get digits after decimal point, if any.
+    if (decimal_point(*p))                                              // Get digits after decimal point, if any.
     {
         p++;
         while (valid_digit(*p))
@@ -420,19 +422,17 @@ static float _atof(const char *p)
 static char *ftoa(float x, char *floatString)
 {
     int32_t value;
-    char intString1[12];
-    char intString2[12] = { 0, };
-    char *decimalPoint = ".";
+    char intString1[12], intString2[12] = { 0, }, *decimalPoint = ".";
     uint8_t dpLocation;
 
     if (x > 0) x += 0.0005f;
-    else x -= 0.0005f;
+    else       x -= 0.0005f;
     value = (int32_t) (x * 1000.0f);                                    // Convert float * 1000 to an integer
 
     itoa(abs_int(value), intString1, 10);                               // Create string from abs of integer value
 
     if (value >= 0) intString2[0] = ' ';                                // Positive number, add a pad space
-    else intString2[0] = '-';                                           // Negative number, add a negative sign
+    else            intString2[0] = '-';                                // Negative number, add a negative sign
 
     if (strlen(intString1) == 1)
     {
@@ -466,6 +466,11 @@ static char *ftoa(float x, char *floatString)
     return floatString;
 }
 
+static void uartPrintCR(void)
+{
+    uartPrint("\r\n");
+}
+
 static void cliPrompt(void)
 {
     uartPrint("\r\n# ");
@@ -477,16 +482,16 @@ static int cliCompare(const void *a, const void *b)
     return strncasecmp(ca->name, cb->name, strlen(cb->name));
 }
 
+#define MaxCharInline 8
 static void PrintBox(uint8_t number, bool fillup)                       // Prints Out Boxname, left aligned and 8 chars. Cropping or filling with blank may occur
 {
-#define MaxCharInline 8
     uint8_t i = 0, k = 0;
     bool DoBlank = false;
 
     if (number >= CHECKBOXITEMS) return;
     while (k != number)
     {
-        if(boxnames[i] == ';') k++;
+        if (boxnames[i] == ';') k++;
         i++;
     }
     k = i;
@@ -502,89 +507,86 @@ static void PrintBox(uint8_t number, bool fillup)                       // Print
     }
 }
 
-static void PrintoutAUX(void)
-{
-    uint8_t  i, k, MaxAuxNumber = max(cfg.rc_auxch, 4);
-    char     buf[3];
-    uint32_t val;
-    printf("ID|AUXCHAN :");
-    for (i = 0; i < MaxAuxNumber; i++) printf(" %02u  ", i + 1);
-    for (i = 0; i < CHECKBOXITEMS; i++)                                 // print out aux channel settings
-    {
-        printf("\r\n%02u|", i);
-        PrintBox(i, true);
-        printf(":");
-        for (k = 0; k < MaxAuxNumber; k++)
-        {
-            strcpy(buf,"---");
-            val = cfg.activate[i];
-            val = val >> (k * 3);
-            if (val & 1) buf[0] = 'L';
-            if (val & 2) buf[1] = 'M';
-            if (val & 4) buf[2] = 'H';
-            printf(" %s ", buf);
-        }
-    }
-    printf("\r\n");
-}
-
 static void cliAuxset(char *cmdline)
 {
-    uint32_t val = 1;
-    bool     remove = false;
-    char     *ptr = cmdline, buf[4];
-    uint8_t  i, AuxChNr, ItemID, len = strlen(cmdline), MaxAuxNumber = max(cfg.rc_auxch, 4);
+    int32_t  i,k, AuxChNr, ItemID, MaxAuxNumber = max(cfg.rc_auxch, 4);
+    uint32_t val;
+    uint8_t  len    = strlen(cmdline);
+    char     *ptr   = cmdline, buf[8];
+    bool     remove;
 
     if (len && *ptr == '-')
     {
+        remove = true;
         ptr++;
         if (*ptr == '-')
         {
             for (i = 0; i < CHECKBOXITEMS; i++) cfg.activate[i] = 0;
-            printf("Wiped aux.\r\n");
-            PrintoutAUX();
+            printf("AUX Wiped\r\n");
+        PrintAuxCh:          
+            uartPrint("ID|AUXCHAN :");
+            for (i = 0; i < MaxAuxNumber; i++) printf(" %02u  ", i + 1);
+            for (i = 0; i < CHECKBOXITEMS; i++)                         // print out aux channel settings
+            {
+                printf("\r\n%02u|", i);
+                PrintBox(i, true);
+                uartPrint(":");
+                for (k = 0; k < MaxAuxNumber; k++)
+                {
+                    strcpy(buf, "---");
+                    val   = cfg.activate[i];
+                    val >>= k * 3;
+                    if (val & 1) buf[0] = 'L';
+                    if (val & 2) buf[1] = 'M';
+                    if (val & 4) buf[2] = 'H';
+                    printf(" %s ", buf);
+                }
+            }
+            uartPrintCR();
             return;
         }
-        remove = true;
-    }
 
+    } else remove = false;        
+    
     if (!len || len < 5)
     {
-        printf("\r\nSet: auxset ID aux state(H/M/L)\r\n");
-        printf("Remove: auxset -ID etc.\r\n");
-        printf("Wipe all: auxset --\r\n");
-        printf("Ex: auxset 1 4 h Sets Box 1 to Aux4 High\r\n\r\n");
-        PrintoutAUX();
-        return;
+        uartPrint("\r\nSet: auxset ID aux state(H/M/L)\r\n");
+        uartPrint("Remove: auxset -ID etc\r\n");
+        uartPrint("Wipe all: auxset --\r\n");
+        uartPrint("Ex: auxset 1 4 h Sets Box 1 to Aux4 High\r\n\r\n");
+        goto PrintAuxCh;
     }
 
-    ItemID = atoi(ptr);
-    ptr = strchr(ptr, ' ') + 1;
-    AuxChNr = atoi(ptr);
-    if (AuxChNr > MaxAuxNumber || !AuxChNr || ItemID >= CHECKBOXITEMS)
+    ItemID  = atoi(ptr);                                                // Is a zero based value
+    ptr     = strchr(ptr, ' ');
+    if (!ptr) return;
+    AuxChNr = atoi(++ptr) - 1;                                          // Is a 1 based value so rebase to zero here
+    if (AuxChNr >= MaxAuxNumber || AuxChNr < 0 || ItemID >= CHECKBOXITEMS || ItemID < 0)
     {
         cliErrorMessage();
         return;
     }
-    AuxChNr--;
-    ptr = strchr(ptr, ' ') + 1;
-    i   = AuxChNr * 3;
+    ptr = strchr(ptr, ' ');
+    if (!ptr) return;
+    ptr++;
+    i = AuxChNr * 3;
+    val = 1;
     switch(*ptr)
     {
     case 'L':
     case 'l':
-        strcpy(buf,"LOW ");
+        strcpy(buf, "LOW ");
         val <<= i;
         break;
     case 'M':
     case 'm':
-        strcpy(buf,"MED ");
-        val <<= (i + 1);
+        strcpy(buf, "MED ");
+        val <<= i + 1;
         break;
     case 'H':
     case 'h':
-        strcpy(buf,"HIGH");
-        val <<= (i + 2);
+        strcpy(buf, "HIGH");
+        val <<= i + 2;
         break;
     default:
         cliErrorMessage();
@@ -594,15 +596,15 @@ static void cliAuxset(char *cmdline)
     if(remove)
     {
         cfg.activate[ItemID] ^= val;
-        printf("Removing ");
+        uartPrint("Removing ");
     }
     else
     {
-        printf("Setting ");
+        uartPrint("Setting ");
     }
     PrintBox(ItemID, false);
     printf(" Aux %02u %s\r\n", AuxChNr + 1, buf);
-    PrintoutAUX();
+    goto PrintAuxCh;
 }
 
 #define GoodMixThresh (int32_t)(MixerMultiply * 0.02f)                  // Mixersum for each axis should be "0" but we define a margin here that still lets the mixer be ok in the gui printout
@@ -626,8 +628,9 @@ static void cliCMix(char *cmdline)
             if (!tmp[0]) break;
             printf("#%d:\t", motnum + 1);
             for (i = 0; i < 4; i++) printf("%s\t", ftoa(Int16MixToFloat(tmp[i]), buf));
-            uartPrint("\r\n");
+            uartPrintCR();
         }
+        if (!motnum) return;
         for (i = 0; i < 3; i++) tmp[i] = 0;                             // Fix by meister
         for (i = 0; i < motnum; i++)
         {
@@ -635,9 +638,9 @@ static void cliCMix(char *cmdline)
             tmp[1] += cfg.customMixer[i].pitch;
             tmp[2] += cfg.customMixer[i].yaw;
         }
-        uartPrint("Sanity check:\t");
+        uartPrint("Sanity:\t\t");
         for (i = 0; i < 3; i++) uartPrint(abs_int(tmp[i]) > GoodMixThresh ? "NG\t" : "OK\t");
-        uartPrint("\r\n");
+        uartPrintCR();
         return;
     }
     else if (!strncasecmp(cmdline, "load", 4))
@@ -679,7 +682,7 @@ static void cliCMix(char *cmdline)
                 cfg.customMixer[i].roll     = tmp[1];
                 cfg.customMixer[i].pitch    = tmp[2];
                 cfg.customMixer[i].yaw      = tmp[3];
-                goto PrintCmix;                                        // goto is used to save codesize and avoid recursion "cliCMix("");"
+                goto PrintCmix;                                         // goto is used to save codesize and avoid recursion "cliCMix("");"
             }
             else uartPrint("Invalid number of arguments\r\n");
         }
@@ -699,7 +702,7 @@ static void cliDump(char *cmdline)
 {
     printf("Config:\r\n");
     printf("FW: %s\r\n", FIRMWARE);
-    PrintoutAUX();
+    cliAuxset(cmdline);
     cliMixer(cmdline);
     cliCMix(cmdline);
     cliFeature(cmdline);
@@ -721,7 +724,7 @@ static void cliFeature(char *cmdline)
             if (featureNames[i] == NULL) break;
             if (mask & (1 << i)) printf("%s ", featureNames[i]);
         }
-        uartPrint("\r\n");
+        uartPrintCR();
     }
     else if (strncasecmp(cmdline, "list", len) == 0)
     {
@@ -731,7 +734,7 @@ static void cliFeature(char *cmdline)
             if (featureNames[i] == NULL) break;
             printf("%s \r\n", featureNames[i]);
         }
-        uartPrint("\r\n");
+        uartPrintCR();
         return;
     }
     else
@@ -822,7 +825,7 @@ static void cliMixer(char *cmdline)
             if (mixerNames[i] == NULL) break;
             printf("%s ", mixerNames[i]);
         }
-        uartPrint("\r\n");
+        uartPrintCR();
         return;
     }
 
@@ -942,7 +945,7 @@ static void cliSet(char *cmdline)
             val = &valueTable[i];
             printf("%s = ", val->name);
             cliPrintVar(val, len);                                      // when len is 1 (when * is passed as argument), it will print min/max values as well, for gui
-            uartPrint("\r\n");
+            uartPrintCR();
         }
     }
     else if ((eqptr = strstr(cmdline, "=")))                            // has equal, set var
@@ -1411,7 +1414,7 @@ void cliProcess(void)
             {
                 clicmd_t *cmd = NULL;
                 clicmd_t target;
-                uartPrint("\r\n");
+                uartPrintCR();
                 cliBuffer[bufferIndex] = 0;                             // null terminate
                 target.name  = cliBuffer;
                 target.param = NULL;
@@ -1542,7 +1545,7 @@ static void cliScanbus(char *cmdline)
         }
         delay(50);
     }
-    uartPrint("\r\n");
+    uartPrintCR();
     i2cFastSpeed(true);                                 // set I2C I2C Fast mode
     if (!nDevices) printf("No I2C devices\r\n");
     else printf("%d Devices\r\n",nDevices);
