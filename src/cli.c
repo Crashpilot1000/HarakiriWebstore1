@@ -168,7 +168,7 @@ const clivalue_t valueTable[] =
     { VAR_UINT16, 1,       0,      10000, &cfg.rc_killt,               "rc_killt"               },
     { VAR_UINT8,  1,       0,          3, &cfg.rc_flpsp,               "rc_flpsp"               },
     { VAR_UINT8,  1,       0,          2, &cfg.rc_motor,               "rc_motor"               },
-    { VAR_UINT8,  0,       0,          6, &cfg.rc_auxch,               "rc_auxch"               },
+    { VAR_UINT8,  0,       4,          6, &cfg.rc_auxch,               "rc_auxch"               },
     { VAR_UINT8,  1,       0,        250, &cfg.rcRate8,                "rc_rate"                },
     { VAR_UINT8,  1,       0,        100, &cfg.rcExpo8,                "rc_expo"                },
     { VAR_UINT8,  1,       0,        100, &cfg.thrMid8,                "thr_mid"                },
@@ -483,33 +483,28 @@ static int cliCompare(const void *a, const void *b)
 }
 
 #define MaxCharInline 8
-static void PrintBox(uint8_t number, bool fillup)                       // Prints Out Boxname, left aligned and 8 chars. Cropping or filling with blank may occur
+static void PrtBoxname(uint8_t number, bool fillup)                     // Prints Out Boxname, left aligned and 8 chars. Cropping or filling with blank may occur
 {
-    uint8_t i = 0, k = 0;
-    bool DoBlank = false;
+    uint8_t i = 0, srcptr = 0;
+    bool fillrest = false;
 
-    if (number >= CHECKBOXITEMS) return;
-    while (k != number)
-    {
-        if (boxnames[i] == ';') k++;
-        i++;
-    }
-    k = i;
+    while (i != number) if (boxnames[srcptr++] == ';') i++;
     for (i = 0; i < MaxCharInline; i++)
     {
-        if (boxnames[k + i] == ';')
+        if (boxnames[srcptr] == ';')
         {
-            if (fillup) DoBlank = true;
+            if (fillup) fillrest = true;
             else return;
         }
-        if (DoBlank) printf(" ");
-        else printf("%c", boxnames[k + i]);          
+        if (fillrest) uartPrint(" ");
+        else printf("%c", boxnames[srcptr]);
+        srcptr++;
     }
 }
 
 static void cliAuxset(char *cmdline)
 {
-    int32_t  i,k, AuxChNr, ItemID, MaxAuxNumber = max(cfg.rc_auxch, 4);
+    int32_t  i, k, AuxChNr, ItemID, MaxAuxNumber = cfg.rc_auxch;
     uint32_t val;
     uint8_t  len    = strlen(cmdline);
     char     *ptr   = cmdline, buf[8];
@@ -524,13 +519,12 @@ static void cliAuxset(char *cmdline)
             for (i = 0; i < CHECKBOXITEMS; i++) cfg.activate[i] = 0;
             printf("AUX Wiped\r\n");
         PrintAuxCh:          
-            uartPrint("ID|AUXCHAN :");
-            for (i = 0; i < MaxAuxNumber; i++) printf(" %02u  ", i + 1);
+            uartPrint("ID AUXCHAN  ");
+            for (i = 0; i < MaxAuxNumber; i++) printf("\t %02u  ", i + 1);
             for (i = 0; i < CHECKBOXITEMS; i++)                         // print out aux channel settings
             {
-                printf("\r\n%02u|", i);
-                PrintBox(i, true);
-                uartPrint(":");
+                printf("\r\n%02u ", i);
+                PrtBoxname(i, true);
                 for (k = 0; k < MaxAuxNumber; k++)
                 {
                     snprintf (buf, sizeof(buf), "---");
@@ -539,15 +533,14 @@ static void cliAuxset(char *cmdline)
                     if (val & 1) buf[0] = 'L';
                     if (val & 2) buf[1] = 'M';
                     if (val & 4) buf[2] = 'H';
-                    printf(" %s ", buf);
+                    printf("\t %s ", buf);
                 }
             }
             uartPrintCR();
             return;
         }
-
     } else remove = false;        
-    
+
     if (!len || len < 5)
     {
         uartPrint("\r\nSet: auxset ID aux state(H/M/L)\r\n");
@@ -575,12 +568,12 @@ static void cliAuxset(char *cmdline)
     {
     case 'L':
     case 'l':
-        snprintf(buf, sizeof(buf), "LOW ");
+        snprintf(buf, sizeof(buf), "LOW");
         val <<= i;
         break;
     case 'M':
     case 'm':
-        snprintf(buf, sizeof(buf), "MED ");
+        snprintf(buf, sizeof(buf), "MED");
         val <<= i + 1;
         break;
     case 'H':
@@ -602,7 +595,7 @@ static void cliAuxset(char *cmdline)
     {
         uartPrint("Setting ");
     }
-    PrintBox(ItemID, false);
+    PrtBoxname(ItemID, false);
     printf(" Aux %02u %s\r\n", AuxChNr + 1, buf);
     goto PrintAuxCh;
 }
@@ -658,7 +651,7 @@ static void cliCMix(char *cmdline)
                 } else if (!strncasecmp(ptr, mixerNames[i], len))
                 {
                     mixerLoadMix(i);
-                    printf("Loaded %s mix...\r\n", mixerNames[i]);
+                    printf("Loaded %s mix\r\n", mixerNames[i]);
                     goto PrintCmix;                                     // goto is used to save codesize and avoid recursion "cliCMix("");"
                 }
             }
@@ -686,13 +679,14 @@ static void cliCMix(char *cmdline)
             }
             else uartPrint("Invalid number of arguments\r\n");
         }
-        else printf("Motor nr not in range 1 - %d\r\n", MAX_MOTORS);
+        else printf("Motor out of range 1 - %d\r\n", MAX_MOTORS);
+             
     }
 }
 
 static void cliDefault(char *cmdline)
 {
-    uartPrint("Resetting to defaults\r\n");
+    uartPrint("Reset to default\r\n");
     checkFirstTime(true);
     uartPrint("Rebooting");
     systemReset(false);
