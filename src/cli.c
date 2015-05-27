@@ -496,8 +496,8 @@ static void PrtBoxname(uint8_t number, bool fillup)                     // Print
             if (fillup) fillrest = true;
             else return;
         }
-        if (fillrest) uartPrint(" ");
-        else printf("%c", boxnames[srcptr]);
+        if (fillrest) uartWrite(0x20);                                  // 0x20 <SPACE>
+        else uartWrite(boxnames[srcptr]);
         srcptr++;
     }
 }

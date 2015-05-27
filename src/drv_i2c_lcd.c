@@ -306,19 +306,19 @@ static void OledGPSCoordPrtToBuf(int32_t coord, char *buf)      // alternative: 
 void OLED_Status(void)                                          // Not Time critical, runs in disarmed state
 {
     static uint8_t OLEDDelay = 0;
-    char line[22];
+    char line[24];                                              // "22" needed, aligned to 32 bit here
     uint8_t i;
     int32_t tmp0;
 
     OLEDDelay++;
     if (OLEDDelay < 30) return;
     OLEDDelay = 0;
-
-    sprintf(line, "MAG : WARN    ", (int16_t)heading);
+  
+    snprintf (line, sizeof(line), "MAG : WARN    ");
     if (cfg.mag_calibrated) for (i = 0; i < 4; i++) line[i + 6] = DigitToChar(heading, 3 - i);
     i2c_OLED_PrintLineAtROW(line, 0);
 
-    sprintf(line, "VBAT: --,-V AGL: ----");
+    snprintf (line, sizeof(line), "VBAT: --,-V AGL: ----");
     if (FEATURE_VBAT)
     {
         line[6] = DigitToChar(vbat, 2);
@@ -330,7 +330,7 @@ void OLED_Status(void)                                          // Not Time crit
     for (i = 0; i < 4; i++) line[i + 17] = DigitToChar(tmp0, 3 - i);
     i2c_OLED_PrintLineAtROW(line, 1);
 
-    sprintf(line, "LAT :  .-+-.-------  ");
+    snprintf (line, sizeof(line), "LAT :  .-+-.-------  ");
     if (FEATURE_GPS)
     {
         line[6] = Real_GPS_coord[LAT] < 0 ? 'S' : 'N';
@@ -338,7 +338,7 @@ void OLED_Status(void)                                          // Not Time crit
     }
     i2c_OLED_PrintLineAtROW(line, 2);
 
-    sprintf(line, "LON :  .-+-.-------  ");
+    snprintf (line, sizeof(line), "LON :  .-+-.-------  ");
     if (FEATURE_GPS)
     {
         line[6] = Real_GPS_coord[LON] < 0 ? 'W' : 'E';
@@ -346,7 +346,7 @@ void OLED_Status(void)                                          // Not Time crit
     }
     i2c_OLED_PrintLineAtROW(line, 3);
 
-    if (FEATURE_GPS) sprintf(line, "SAT : %d   FIX : %d  ", GPS_satnum, GPS_fix);
-    else             sprintf(line, "SAT : -    FIX : -   ");
+    if (FEATURE_GPS) sprintf(line, "SAT : %d   FIX : %d  ", GPS_satnum, GPS_fix); // snprintf doesn't work here
+    else             snprintf(line, sizeof(line), "SAT : -    FIX : -   ");   
     i2c_OLED_PrintLineAtROW(line, 4);
 }
