@@ -35,7 +35,7 @@
 #include "board.h"
 #include "printf.h"
 
-#define PRINTF_LONG_SUPPORT
+// #define PRINTF_LONG_SUPPORT We don't deal with 64Bit numbers in this project
 
 extern bool i2cLCD;   // true, if an OLED-Display is connected, Johannes
 
