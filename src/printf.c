@@ -158,7 +158,6 @@ static void putchw(void *putp, putcf putf, int n, char z, char *bf)
 void tfp_format(void *putp, putcf putf, char *fmt, va_list va)
 {
     char bf[12];
-
     char ch;
 
     while ((ch = *(fmt++)))
@@ -167,7 +166,8 @@ void tfp_format(void *putp, putcf putf, char *fmt, va_list va)
         {  // Johannes
             if (i2cLCD) i2c_OLED_send_char(ch);
             else putf(putp, ch);
-        } else
+        }
+        else
         {
             char lz = 0;
 #ifdef 	PRINTF_LONG_SUPPORT
@@ -194,7 +194,7 @@ void tfp_format(void *putp, putcf putf, char *fmt, va_list va)
             switch (ch)
             {
             case 0:
-                goto abort;
+                return;
             case 'u':
             {
 #ifdef 	PRINTF_LONG_SUPPORT
@@ -242,8 +242,6 @@ void tfp_format(void *putp, putcf putf, char *fmt, va_list va)
             }
         }
     }
-abort:
-    ;
 }
 
 

@@ -527,7 +527,7 @@ static void cliAuxset(char *cmdline)
                 PrtBoxname(i, true);
                 for (k = 0; k < MaxAuxNumber; k++)
                 {
-                    snprintf (buf, sizeof(buf), "---");
+                    sprintf(buf, "---");
                     val   = cfg.activate[i];
                     val >>= k * 3;
                     if (val & 1) buf[0] = 'L';
@@ -568,17 +568,17 @@ static void cliAuxset(char *cmdline)
     {
     case 'L':
     case 'l':
-        snprintf(buf, sizeof(buf), "LOW");
+        sprintf(buf, "LOW");
         val <<= i;
         break;
     case 'M':
     case 'm':
-        snprintf(buf, sizeof(buf), "MED");
+        sprintf(buf, "MED");
         val <<= i + 1;
         break;
     case 'H':
     case 'h':
-        snprintf(buf, sizeof(buf), "HIGH");
+        sprintf(buf, "HIGH");
         val <<= i + 2;
         break;
     default:
@@ -1502,36 +1502,36 @@ static void cliScanbus(char *cmdline)
             switch (address)
             {
             case MMA8452_ADDRESS:                       // Detection altered
-                snprintf(buf, sizeof(buf), "MMA8452");
+                sprintf(buf, "MMA8452");
                 break;
             case HMC5883L_ADDRESS:
-                snprintf(buf, sizeof(buf), "HMC5883L");
+                sprintf(buf, "HMC5883L");
                 break;
             case DaddyW_SONAR:                          // Summarize as "Sonar"
             case MBandSRF_ADDRESS:
-                snprintf(buf, sizeof(buf), "Sonar");
+                sprintf(buf, "Sonar");
                 break;
             case EagleTreePowerPanel:                   // Summarize as "Display"
             case OLD1_ADDRESS:
             case OLD2_ADDRESS:
-                snprintf(buf, sizeof(buf), "Display");
+                sprintf(buf, "Display");
                 break;
             case ADXL345_ADDRESS:                       // ADXL added
-                snprintf(buf, sizeof(buf), "ADXL345");
+                sprintf(buf, "ADXL345");
                 break;
             case BMA180_ADDRESS:                        // Sensor currently not supported by a driver
-                snprintf(buf, sizeof(buf), "BMA180");
+                sprintf(buf, "BMA180");
                 break;
             case MPU6050_ADDRESS:
-                if (L3G4200D) snprintf(buf, sizeof(buf), "L3G4200D");
-                else snprintf(buf, sizeof(buf), "MPU3050/MPU6050");
+                if (L3G4200D) sprintf(buf, "L3G4200D");
+                else          sprintf(buf, "MPU3050/MPU6050");
                 break;
             case BMPandMS_ADDRESS:
-                if(msbaro) snprintf(buf, sizeof(buf), "MS5611");
-                else snprintf(buf, sizeof(buf), "BMP085");
+                if (msbaro) sprintf(buf, "MS5611");
+                else        sprintf(buf, "BMP085");
                 break;
             default:                                    // Unknown case added
-                snprintf(buf, sizeof(buf), "UNKNOWN");
+                sprintf(buf, "UNKNOWN");
                 break;
             }
             printf(" probably %s \r\n",buf);

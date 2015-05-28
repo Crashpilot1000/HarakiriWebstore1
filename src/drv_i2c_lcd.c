@@ -314,11 +314,11 @@ void OLED_Status(void)                                          // Not Time crit
     if (OLEDDelay < 30) return;
     OLEDDelay = 0;
   
-    snprintf (line, sizeof(line), "MAG : WARN    ");
+    sprintf (line, "MAG : WARN    ");
     if (cfg.mag_calibrated) for (i = 0; i < 4; i++) line[i + 6] = DigitToChar(heading, 3 - i);
     i2c_OLED_PrintLineAtROW(line, 0);
 
-    snprintf (line, sizeof(line), "VBAT: --,-V AGL: ----");
+    sprintf (line, "VBAT: --,-V AGL: ----");
     if (FEATURE_VBAT)
     {
         line[6] = DigitToChar(vbat, 2);
@@ -330,7 +330,7 @@ void OLED_Status(void)                                          // Not Time crit
     for (i = 0; i < 4; i++) line[i + 17] = DigitToChar(tmp0, 3 - i);
     i2c_OLED_PrintLineAtROW(line, 1);
 
-    snprintf (line, sizeof(line), "LAT :  .-+-.-------  ");
+    sprintf (line, "LAT :  .-+-.-------  ");
     if (FEATURE_GPS)
     {
         line[6] = Real_GPS_coord[LAT] < 0 ? 'S' : 'N';
@@ -338,7 +338,7 @@ void OLED_Status(void)                                          // Not Time crit
     }
     i2c_OLED_PrintLineAtROW(line, 2);
 
-    snprintf (line, sizeof(line), "LON :  .-+-.-------  ");
+    sprintf (line, "LON :  .-+-.-------  ");
     if (FEATURE_GPS)
     {
         line[6] = Real_GPS_coord[LON] < 0 ? 'W' : 'E';
@@ -346,7 +346,7 @@ void OLED_Status(void)                                          // Not Time crit
     }
     i2c_OLED_PrintLineAtROW(line, 3);
 
-    if (FEATURE_GPS) sprintf(line, "SAT : %d   FIX : %d  ", GPS_satnum, GPS_fix); // snprintf doesn't work here
-    else             snprintf(line, sizeof(line), "SAT : -    FIX : -   ");   
+    if (FEATURE_GPS) sprintf(line, "SAT : %d   FIX : %d  ", GPS_satnum, GPS_fix);
+    else             sprintf(line, "SAT : -    FIX : -   ");   
     i2c_OLED_PrintLineAtROW(line, 4);
 }
