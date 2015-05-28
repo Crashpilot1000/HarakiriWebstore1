@@ -83,14 +83,14 @@ typedef union
     struct
     {
         int32_t WPGPS[2];
-        int16_t WPHight;  // In meters
-        int16_t WPHead;   // +-180 Degree
-        uint8_t WPTime;   // MAV_CMD_NAV_LOITER_TIME Time in Seconds; MAV_CMD_NAV_WAYPOINT 1 means slow corner, 0 fast corner;
-        uint8_t WPPara1;  // MAV_CMD_NAV_WAYPOINT Hitradius in m
-        int8_t  WPPara2;  // MAV_CMD_NAV_LOITER_TURNS +cw -ccw, 0 not possible
-        uint8_t WPCMD;    // What action
+        int16_t WPHight;                    // In meters
+        int16_t WPHead;                     // +-180 Degree
+        uint8_t WPTime;                     // MAV_CMD_NAV_LOITER_TIME Time in Seconds; MAV_CMD_NAV_WAYPOINT 1 means slow corner, 0 fast corner;
+        uint8_t WPPara1;                    // MAV_CMD_NAV_WAYPOINT Hitradius in m
+        int8_t  WPPara2;                    // MAV_CMD_NAV_LOITER_TURNS +cw -ccw, 0 not possible
+        uint8_t WPCMD;                      // What action
     };
-    uint8_t bytes[16];    // Sizeof reports 16 Bytes.
+    uint8_t bytes[16];                      // Sizeof reports 16 Bytes.
 } wp_t;
 
 typedef enum MavlnkCommand
@@ -184,6 +184,40 @@ enum                                        // This is limited to 32 Boxes!!
     BOXGTUNE,
     CHECKBOXITEMS
 };
+
+// MiscHdw & MiscHdwnames are just for CLI Prinout
+enum                                        // Keep the liststart in line with typedef enum AccelSensors in board.h
+{
+    PRTADXL345  = 0,
+    PRTMPU6050,
+    PRTMMA8452,
+    PRTBMA280,
+    PRTMPU6500,
+    PRTBMA180,
+    PRTL3G4200D,
+    PRTMS5611,
+    PRTBMP085,
+    PRTOLED,
+    PRTSONAR,
+    PRTHMC5883,
+    PRTUNKNOWN,
+    PRTHDWITEMS
+};
+
+static const char MiscHdwnames[] =          // Keep the liststart in line with typedef enum AccelSensors in board.h
+    "ADXL345;"
+    "MPU6050;"
+    "MMA8452;"
+    "BMA280;"
+    "MPU6500;"
+    "BMA180;"
+    "L3G4200D;"
+    "MS5611;"
+    "BMP085;"
+    "OLED;"
+    "SONAR;"
+    "HMC5883;"
+    "UNKNOWN;";
 
 static const char boxnames[] =
     "ANGLE;"

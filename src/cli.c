@@ -116,11 +116,6 @@ const char * const sensorNames[] =
     "ACC", "BARO", "MAG", "SONAR", "GPS", NULL
 };
 
-const char * const accNames[] =
-{
-    "", "ADXL345", "MPU6050", "MMA845x", NULL
-};
-
 typedef struct
 {
     char *name;
@@ -464,6 +459,14 @@ static char *ftoa(float x, char *floatString)
     strcat(floatString, decimalPoint);
     strcat(floatString, intString2 + dpLocation);
     return floatString;
+}
+
+static void printMiscHdwnames(int hdwnumber)                            // see MiscHdwnames in mw.h
+{
+    int i = 0, srcptr = 0;
+    hdwnumber = constrain_int(hdwnumber, 0, PRTHDWITEMS - 1);
+    while (i != hdwnumber) if (MiscHdwnames[srcptr++] == ';') i++;
+    while (MiscHdwnames[srcptr] != ';') uartWrite(MiscHdwnames[srcptr++]);
 }
 
 static void uartPrintCR(void)
@@ -1018,8 +1021,8 @@ static void cliStatus(char *cmdline)
     EEPROMandFloppyStatusReport();
     printf("SENSORS:");
     printf("\r\nGyro ");
-    if(havel3g4200d) printf("L3G4200D");
-    else printf("MPU");
+    if(havel3g4200d) printMiscHdwnames(PRTL3G4200D);
+    else printMiscHdwnames(PRTMPU6050);
     printf("\r\nActual");
     printxyzcalval(gyroZero);
     if (cfg.ShakyDataAvail)
@@ -1030,7 +1033,8 @@ static void cliStatus(char *cmdline)
     printf("\r\nTemp: %d",(int32_t)telemTemperature1);
     if (sensors(SENSOR_ACC))
     {
-        printf("\r\n\r\nAcc %s", accNames[accHardware]);
+        printf("\r\n\r\nAcc ");
+        printMiscHdwnames(accHardware - 1);
         printf("\r\nStatus: ");
         if(cfg.acc_calibrated)
         {
@@ -1042,7 +1046,8 @@ static void cliStatus(char *cmdline)
     }
     if (sensors(SENSOR_MAG))
     {
-        printf("\r\n\r\nMag HMC5883");
+        printf("\r\n\r\nMag ");
+        printMiscHdwnames(PRTHMC5883);
         printf("\r\nStatus: ");
         if (cfg.mag_calibrated)
         {
@@ -1057,8 +1062,8 @@ static void cliStatus(char *cmdline)
     if (sensors(SENSOR_BARO))
     {
         printf("\r\n\r\nBaro ");
-        if(baro.baro_type == 1) printf("BMP085");
-        else printf("MS5611");
+        if(baro.baro_type == 1) printMiscHdwnames(PRTBMP085);
+        else printMiscHdwnames(PRTMS5611);
         printf("\r\nTemp: %d",(int32_t)BaroActualTemp);
     }
     printf("\r\n\r\nSTATS:");
@@ -1460,9 +1465,8 @@ static void cliScanbus(char *cmdline)
 {
     bool    ack, msbaro = false, L3G4200D = false;
     uint8_t address, nDevices = 0, sig, bufsnr[2];
-    char    buf[20];
 
-    printf("\r\nScanning I2C-Bus\r\n\r\n");
+    uartPrint("\r\nScanning I2C-Bus\r\n\r\n");
     i2cFastSpeed(false);                                // set I2C Standard mode
     for(address = 1; address < 127; address++ )
     {
@@ -1496,52 +1500,52 @@ static void cliScanbus(char *cmdline)
         }
         if (ack)
         {
-            printf("I2C device at 0x");
-            if (address<16) printf("0");
-            printf("%x",address);
+            uartPrint("I2C device at 0x");
+            if (address < 0x10) uartPrint("0");
+            printf("%x probably ",address);
             switch (address)
             {
             case MMA8452_ADDRESS:                       // Detection altered
-                sprintf(buf, "MMA8452");
+                printMiscHdwnames(PRTMMA8452);
                 break;
             case HMC5883L_ADDRESS:
-                sprintf(buf, "HMC5883L");
+                printMiscHdwnames(PRTHMC5883);
                 break;
             case DaddyW_SONAR:                          // Summarize as "Sonar"
             case MBandSRF_ADDRESS:
-                sprintf(buf, "Sonar");
+                printMiscHdwnames(PRTSONAR);
                 break;
             case EagleTreePowerPanel:                   // Summarize as "Display"
             case OLD1_ADDRESS:
             case OLD2_ADDRESS:
-                sprintf(buf, "Display");
+                printMiscHdwnames(PRTOLED);
                 break;
             case ADXL345_ADDRESS:                       // ADXL added
-                sprintf(buf, "ADXL345");
+                printMiscHdwnames(PRTADXL345);
                 break;
             case BMA180_ADDRESS:                        // Sensor currently not supported by a driver
-                sprintf(buf, "BMA180");
+                printMiscHdwnames(PRTBMA180);
                 break;
             case MPU6050_ADDRESS:
-                if (L3G4200D) sprintf(buf, "L3G4200D");
-                else          sprintf(buf, "MPU3050/MPU6050");
+                if (L3G4200D) printMiscHdwnames(PRTL3G4200D);
+                else          printMiscHdwnames(PRTMPU6050);
                 break;
             case BMPandMS_ADDRESS:
-                if (msbaro) sprintf(buf, "MS5611");
-                else        sprintf(buf, "BMP085");
+                if (msbaro) printMiscHdwnames(PRTMS5611);
+                else        printMiscHdwnames(PRTBMP085);
                 break;
             default:                                    // Unknown case added
-                sprintf(buf, "UNKNOWN");
+                printMiscHdwnames(PRTUNKNOWN);
                 break;
             }
-            printf(" probably %s \r\n",buf);
+            uartPrintCR();
             nDevices++;
         }
         delay(50);
     }
     uartPrintCR();
     i2cFastSpeed(true);                                 // set I2C I2C Fast mode
-    if (!nDevices) printf("No I2C devices\r\n");
+    if (!nDevices) uartPrint("No I2C devices\r\n");
     else printf("%d Devices\r\n",nDevices);
 }
 
