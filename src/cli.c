@@ -38,8 +38,6 @@ static void cliVersion(char *cmdline);
 static void cliScanbus(char *cmdline);
 static void cliPassgps(char *cmdline);
 static void cliFlash(char *cmdline);
-static void cliErrorMessage(void);
-static void cliRecal(void);
 static void cliPrintVar(const clivalue_t *var, uint32_t full);
 static void cliWpflush(char *cmdline);
 
@@ -417,9 +415,10 @@ static float _atof(const char *p)
 static char *ftoa(float x, char *floatString)
 {
     int32_t value;
-    char intString1[12], intString2[12] = { 0, }, *decimalPoint = ".";
+    char intString1[12], intString2[12];
     uint8_t dpLocation;
 
+    memset (intString2, 0, sizeof(intString2));                         // Fill with 0 For Stringtermination
     if (x > 0) x += 0.0005f;
     else       x -= 0.0005f;
     value = (int32_t) (x * 1000.0f);                                    // Convert float * 1000 to an integer
@@ -428,55 +427,42 @@ static char *ftoa(float x, char *floatString)
 
     if (value >= 0) intString2[0] = ' ';                                // Positive number, add a pad space
     else            intString2[0] = '-';                                // Negative number, add a negative sign
-
-    if (strlen(intString1) == 1)
+    switch(strlen(intString1))
     {
+    case 1:
         intString2[1] = '0';
         intString2[2] = '0';
         intString2[3] = '0';
-        strcat(intString2, intString1);
-    }
-    else if (strlen(intString1) == 2)
-    {
+        break;
+    case 2:
         intString2[1] = '0';
         intString2[2] = '0';
-        strcat(intString2, intString1);
-    }
-    else if (strlen(intString1) == 3)
-    {
+        break;
+    case 3:
         intString2[1] = '0';
-        strcat(intString2, intString1);
+    default:
+        break;
     }
-    else
-    {
-        strcat(intString2, intString1);
-    }
-
+    strcat(intString2, intString1);
     dpLocation = strlen(intString2) - 3;
-
     strncpy(floatString, intString2, dpLocation);
     floatString[dpLocation] = '\0';
-    strcat(floatString, decimalPoint);
+    strcat(floatString, ".");
     strcat(floatString, intString2 + dpLocation);
     return floatString;
 }
 
-static void printMiscHdwnames(int hdwnumber)                            // see MiscHdwnames in mw.h
+static void printMiscCLITXT(int32_t blubbernumber)                            // see MiscCLItxt in mw.h
 {
-    int i = 0, srcptr = 0;
-    hdwnumber = constrain_int(hdwnumber, 0, PRTHDWITEMS - 1);
-    while (i != hdwnumber) if (MiscHdwnames[srcptr++] == ';') i++;
-    while (MiscHdwnames[srcptr] != ';') uartWrite(MiscHdwnames[srcptr++]);
+    int32_t i = 0, srcptr = 0;
+    blubbernumber = constrain_int(blubbernumber, 0, PRTCLIITEMS - 1);         // Ensure range just for safety here
+    while (i != blubbernumber) if (MiscCLItext[srcptr++] == ';') i++;         // Search for blubberentry
+    while (MiscCLItext[srcptr] != ';') printf("%c", MiscCLItext[srcptr++]);   // uartWrite(MiscCLInames[srcptr++]); is too fast for buffers to keep up and incompatible to serial LCD
 }
 
-static void uartPrintCR(void)
+static void PrintCR(void)
 {
-    uartPrint("\r\n");
-}
-
-static void cliPrompt(void)
-{
-    uartPrint("\r\n# ");
+    printf("\r\n");
 }
 
 static int cliCompare(const void *a, const void *b)
@@ -509,8 +495,8 @@ static void cliAuxset(char *cmdline)
 {
     int32_t  i, k, AuxChNr, ItemID, MaxAuxNumber = cfg.rc_auxch;
     uint32_t val;
-    uint8_t  len    = strlen(cmdline);
-    char     *ptr   = cmdline, buf[8];
+    uint8_t  len  = strlen(cmdline);
+    char     *ptr = cmdline, buf[8];
     bool     remove;
 
     if (len && *ptr == '-')
@@ -520,9 +506,9 @@ static void cliAuxset(char *cmdline)
         if (*ptr == '-')
         {
             for (i = 0; i < CHECKBOXITEMS; i++) cfg.activate[i] = 0;
-            printf("AUX Wiped\r\n");
-        PrintAuxCh:          
-            uartPrint("ID AUXCHAN  ");
+            printMiscCLITXT(PRTAUXSETAUXWIPED);
+        PrintAuxCh:
+            printMiscCLITXT(PRTAUXSETIDAUXCHAN);                        // print "frame"
             for (i = 0; i < MaxAuxNumber; i++) printf("\t %02u  ", i + 1);
             for (i = 0; i < CHECKBOXITEMS; i++)                         // print out aux channel settings
             {
@@ -539,17 +525,14 @@ static void cliAuxset(char *cmdline)
                     printf("\t %s ", buf);
                 }
             }
-            uartPrintCR();
+            PrintCR();
             return;
         }
     } else remove = false;        
 
     if (!len || len < 5)
     {
-        uartPrint("\r\nSet: auxset ID aux state(H/M/L)\r\n");
-        uartPrint("Remove: auxset -ID etc\r\n");
-        uartPrint("Wipe all: auxset --\r\n");
-        uartPrint("Ex: auxset 1 4 h Sets Box 1 to Aux4 High\r\n\r\n");
+        printMiscCLITXT(PRTAUXSETPREFACE);
         goto PrintAuxCh;
     }
 
@@ -559,7 +542,7 @@ static void cliAuxset(char *cmdline)
     AuxChNr = atoi(++ptr) - 1;                                          // Is a 1 based value so rebase to zero here
     if (AuxChNr >= MaxAuxNumber || AuxChNr < 0 || ItemID >= CHECKBOXITEMS || ItemID < 0)
     {
-        cliErrorMessage();
+        printMiscCLITXT(PRTHARAKIRIERROR);
         return;
     }
     ptr = strchr(ptr, ' ');
@@ -585,19 +568,16 @@ static void cliAuxset(char *cmdline)
         val <<= i + 2;
         break;
     default:
-        cliErrorMessage();
+        printMiscCLITXT(PRTHARAKIRIERROR);
         return;
     }
     cfg.activate[ItemID] |= val;                                        // Set it here in any case, so we can eor it away if needed
     if(remove)
     {
         cfg.activate[ItemID] ^= val;
-        uartPrint("Removing ");
+        printMiscCLITXT(PRTAUXSETREMOVING);
     }
-    else
-    {
-        uartPrint("Setting ");
-    }
+    else printMiscCLITXT(PRTAUXSETSETTING);
     PrtBoxname(ItemID, false);
     printf(" Aux %02u %s\r\n", AuxChNr + 1, buf);
     goto PrintAuxCh;
@@ -614,7 +594,7 @@ static void cliCMix(char *cmdline)
     if (!len)
     {
     PrintCmix:                                                          // could be a void printcurrentmix(void) as well but this is shorter
-        uartPrint("Custom mixer: \r\nMotor\tThr\tRoll\tPitch\tYaw\r\n");
+        printMiscCLITXT(PRTCMIXFRAME);
         for (motnum = 0; motnum < MAX_MOTORS; motnum++)
         {
             tmp[0] = cfg.customMixer[motnum].throttle;
@@ -624,7 +604,7 @@ static void cliCMix(char *cmdline)
             if (!tmp[0]) break;
             printf("#%d:\t", motnum + 1);
             for (i = 0; i < 4; i++) printf("%s\t", ftoa(Int16MixToFloat(tmp[i]), buf));
-            uartPrintCR();
+            PrintCR();
         }
         if (!motnum) return;
         for (i = 0; i < 3; i++) tmp[i] = 0;                             // Fix by meister
@@ -634,9 +614,9 @@ static void cliCMix(char *cmdline)
             tmp[1] += cfg.customMixer[i].pitch;
             tmp[2] += cfg.customMixer[i].yaw;
         }
-        uartPrint("Sanity:\t\t");
+        printMiscCLITXT(PRTCMIXSANITY);
         for (i = 0; i < 3; i++) uartPrint(abs_int(tmp[i]) > GoodMixThresh ? "NG\t" : "OK\t");
-        uartPrintCR();
+        PrintCR();
         return;
     }
     else if (!strncasecmp(cmdline, "load", 4))
@@ -649,7 +629,7 @@ static void cliCMix(char *cmdline)
             {
                 if (mixerNames[i] == NULL)
                 {
-                    cliErrorMessage();                                  // uartPrint("Invalid mixer type...\r\n");
+                    printMiscCLITXT(PRTHARAKIRIERROR);                  // uartPrint("Invalid mixer type...\r\n");
                     break;
                 } else if (!strncasecmp(ptr, mixerNames[i], len))
                 {
@@ -680,25 +660,28 @@ static void cliCMix(char *cmdline)
                 cfg.customMixer[i].yaw      = tmp[3];
                 goto PrintCmix;                                         // goto is used to save codesize and avoid recursion "cliCMix("");"
             }
-            else uartPrint("Invalid number of arguments\r\n");
+            else printMiscCLITXT(PRTCMIXERROR);
         }
-        else printf("Motor out of range 1 - %d\r\n", MAX_MOTORS);
-             
+        else
+        {
+            printMiscCLITXT(PRTCMIXOUTOFRANGE);
+            printf("%d\r\n", MAX_MOTORS);
+        }
     }
 }
 
 static void cliDefault(char *cmdline)
 {
-    uartPrint("Reset to default\r\n");
+    printMiscCLITXT(PRTRESETTODEFAULT);
     checkFirstTime(true);
-    uartPrint("Rebooting");
+    printMiscCLITXT(PRTREBOOTING);
     systemReset(false);
 }
 
 static void cliDump(char *cmdline)
 {
-    printf("Config:\r\n");
-    printf("FW: %s\r\n", FIRMWARE);
+    printMiscCLITXT(PRTCONFIGFW);
+    printf("%s\r\n", FIRMWARE);
     cliAuxset(cmdline);
     cliMixer(cmdline);
     cliCMix(cmdline);
@@ -715,23 +698,23 @@ static void cliFeature(char *cmdline)
 
     if (!len)
     {
-        uartPrint("Enabled features: ");
+        printMiscCLITXT(PRTENABLEDFEATURES);
         for (i = 0; ; i++)
         {
             if (featureNames[i] == NULL) break;
             if (mask & (1 << i)) printf("%s ", featureNames[i]);
         }
-        uartPrintCR();
+        PrintCR();
     }
     else if (strncasecmp(cmdline, "list", len) == 0)
     {
-        uartPrint("Available features: \r\n");
+        printMiscCLITXT(PRTAVAILFEATURES);
         for (i = 0; ; i++)
         {
             if (featureNames[i] == NULL) break;
             printf("%s \r\n", featureNames[i]);
         }
-        uartPrintCR();
+        PrintCR();
         return;
     }
     else
@@ -749,7 +732,7 @@ static void cliFeature(char *cmdline)
         {
             if (featureNames[i] == NULL)
             {
-                cliErrorMessage();                                      // uartPrint("Invalid feature name\r\n");
+                printMiscCLITXT(PRTHARAKIRIERROR);                      // uartPrint("Invalid feature name\r\n");
                 break;
             }
             if (strncasecmp(cmdline, featureNames[i], len) == 0)
@@ -757,12 +740,12 @@ static void cliFeature(char *cmdline)
                 if (remove)
                 {
                     featureClear(1 << i);
-                    uartPrint("Disabled ");
+                    printMiscCLITXT(PRTDISABLED);
                 }
                 else
                 {
                     featureSet(1 << i);
-                    uartPrint("Enabled ");
+                    printMiscCLITXT(PRTENABLED);
                 }
                 if (fpass != feature(FEATURE_PASS)) cfg.pass_mot = 0;   // Reset to all motors if feature pass was changed
                 printf("%s\r\n", featureNames[i]);
@@ -775,7 +758,7 @@ static void cliFeature(char *cmdline)
 static void cliHelp(char *cmdline)
 {
     uint32_t i = 0;
-    uartPrint("Available commands:\r\n\r\n");
+    printMiscCLITXT(PRTAVAILCOMMANDS);
     for (i = 0; i < CMD_COUNT; i++) printf("%s\t %s\r\n", cmdTable[i].name, cmdTable[i].param);
 }
 
@@ -793,12 +776,12 @@ static void cliMap(char *cmdline)
         {
             if (strchr(rcChannelLetters, cmdline[i]) && !strchr(cmdline + i + 1, cmdline[i]))
                 continue;
-            uartPrint("Must be any order of AETR1234\r\n");
+            printMiscCLITXT(PRTRCMAPORDER);
             return;
         }
         parseRcChannels(cmdline);
     }
-    uartPrint("Current assignment: ");
+    printMiscCLITXT(PRTRCMAPASSIGNMENT);
     for (i = 0; i < 8; i++) out[cfg.rcmap[i]] = rcChannelLetters[i];
     out[i] = '\0';
     printf("%s\r\n", out);
@@ -811,18 +794,19 @@ static void cliMixer(char *cmdline)
 
     if (!len)
     {
-        printf("Current mixer: %s\r\n", mixerNames[cfg.mixerConfiguration - 1]);
+        printMiscCLITXT(PRTMIXERCURRENT);
+        printf("%s\r\n", mixerNames[cfg.mixerConfiguration - 1]);
         return;
     }
     else if (strncasecmp(cmdline, "list", len) == 0)
     {
-        uartPrint("Available mixers: ");
+        printMiscCLITXT(PRTMIXERAVAIL);
         for (i = 0; ; i++)
         {
             if (mixerNames[i] == NULL) break;
             printf("%s ", mixerNames[i]);
         }
-        uartPrintCR();
+        PrintCR();
         return;
     }
 
@@ -830,13 +814,14 @@ static void cliMixer(char *cmdline)
     {
         if (mixerNames[i] == NULL)
         {
-            uartPrint("Invalid mixer type...\r\n");
+            printMiscCLITXT(PRTMIXERINVALID);
             break;
         }
         if (strncasecmp(cmdline, mixerNames[i], len) == 0)
         {
             cfg.mixerConfiguration = i + 1;
-            printf("Mixer set to %s\r\n", mixerNames[i]);
+            printMiscCLITXT(PRTMIXERSETTO);
+            printf("%s\r\n", mixerNames[i]);
             break;
         }
     }
@@ -844,16 +829,16 @@ static void cliMixer(char *cmdline)
 
 static void cliExit(char *cmdline)
 {
-    uartPrint("\r\nLeaving CLI mode without saving\r\n");
-    uartPrint("\r\nRebooting...");
+    printMiscCLITXT(PRTEXITCLIWOSAVING);
+    printMiscCLITXT(PRTREBOOTING);
     systemReset(false);                                                 // Just Reset without saving makes more sense
 }
 
 void cliSave(char *cmdline)
 {
-    uartPrint("Saving...");
+    printMiscCLITXT(PRTSAVING);
     writeParams(0);
-    uartPrint("\r\nRebooting...");
+    printMiscCLITXT(PRTREBOOTING);
     systemReset(false);
 }
 
@@ -936,16 +921,17 @@ static void cliSet(char *cmdline)
 
     if (!len || (len == 1 && cmdline[0] == '*'))
     {
-        uartPrint("Current settings: \r\n");
+        printMiscCLITXT(PRTCURRENTSETTINGS);
         for (i = 0; i < VALUE_COUNT; i++)
         {
             val = &valueTable[i];
             printf("%s = ", val->name);
             cliPrintVar(val, len);                                      // when len is 1 (when * is passed as argument), it will print min/max values as well, for gui
-            uartPrintCR();
+            PrintCR();
         }
+        return;                                                         // End here
     }
-    else if ((eqptr = strstr(cmdline, "=")))                            // has equal, set var
+    else if ((eqptr = strstr(cmdline, "=")))                            // has equal, try to set var
     {
         eqptr++;
         len--;
@@ -954,41 +940,34 @@ static void cliSet(char *cmdline)
         for (i = 0; i < VALUE_COUNT; i++)
         {
             val = &valueTable[i];
-            if (!strncasecmp(cmdline, val->name, strlen(val->name)))
+            if (!strncasecmp(cmdline, val->name, strlen(val->name)) && cliSetVar(val, value, valuef)) // Feed both, cliSetVar knows what to do and reports back success or not
             {
-                if (cliSetVar(val, value, valuef))                      // Feed both, cliSetVar knows what to do and reports back success or not
+                printf("%s set to ", val->name);                        // Print out the success
+                cliPrintVar(val, 0);
+                if (acc_hdwsave != cfg.acc_hdw)                         // Check for hardwarechanges
                 {
-                    printf("%s set to ", val->name);                    // Print out the success
-                    cliPrintVar(val, 0);
-                    if(acc_hdwsave != cfg.acc_hdw)                      // Check for hardwarechanges
-                    {
-                        needcal = cfg.acc_calibrated;                   // Acc was calibrated needs recal now
-                        cfg.angleTrim[ROLL] = cfg.angleTrim[PITCH] = 0.0f;
-                        cfg.accZero[ROLL] = cfg.accZero[PITCH] = cfg.accZero[YAW] = 0.0f;
-                        cfg.sens_1G  = 1;
-                        cfg.acc_calibrated = 0;
-                    }
-                    if(mag_gainsave != cfg.mag_gain)
-                    {
-                        needcal = cfg.mag_calibrated;                   // Mag was calibrated and gain is changed now needs recal
-                        cfg.mag_calibrated = 0;
-                    }
-                    if (needcal) cliRecal();
+                    needcal = cfg.acc_calibrated;                       // Acc was calibrated needs recal now
+                    cfg.angleTrim[ROLL] = cfg.angleTrim[PITCH] = 0.0f;
+                    cfg.accZero[ROLL] = cfg.accZero[PITCH] = cfg.accZero[YAW] = 0.0f;
+                    cfg.sens_1G  = 1;
+                    cfg.acc_calibrated = 0;
                 }
-                else
+                if(mag_gainsave != cfg.mag_gain)
                 {
-                    cliErrorMessage();                                  // uartPrint("ERR: Value assignment out of range\r\n");
+                    needcal = cfg.mag_calibrated;                       // Mag was calibrated and gain is changed now needs recal
+                    cfg.mag_calibrated = 0;
                 }
-                return;
+                if (needcal) printMiscCLITXT(PRTNEEDCAL);
+                return;                                                 // Return successful
             }
         }
-        cliErrorMessage();                                              // uartPrint("ERR: Unknown variable name\r\n");
     }
+    printMiscCLITXT(PRTHARAKIRIERROR);                                  // uartPrint("ERR: Unknown variable name\r\n");
 }
 
 static void EEPROMandFloppyStatusReport(void)
 {
-    printf("EEPROM:\r\n");
+    printMiscCLITXT(PRTEEPROM);
     printf("Total : %d B FreeFlash: %d B\r\n", cfg.size, FLASH_PAGE_SIZE * FLASH_PAGES_FORCONFIG - cfg.size);
     printf("Config: %d B\r\n", cfg.size - FDByteSize);
     printf("Floppy: %d B, %d Datasets of %d possible\r\n\r\n", FDByteSize, cfg.FDUsedDatasets, FDByteSize / sizeof(wp_t));
@@ -999,7 +978,6 @@ static void printxyzcalval(float *off)
     uint8_t i;
     char    X = 'X';
     for (i = 0; i < 3; i++) printf("\r\n%c Offset: %d", X++, (int32_t)off[i]);
-
 }
 
 static void cliStatus(char *cmdline)
@@ -1009,7 +987,7 @@ static void cliStatus(char *cmdline)
     uint16_t tmpu16;
     char     X = 'X';
 
-    printf("\r\nSystem Uptime: %d sec, Volt: %d * 0.1V (%dS battery)\r\n", currentTimeMS / 1000, vbat, batteryCellCount);
+    printf("\r\nUptime: %d sec, Volt: %d * 0.1V (%dS battery)\r\n", currentTimeMS / 1000, vbat, batteryCellCount);
     mask = sensorsMask();
     printf("CPU %dMHz, detected sensors: ", (SystemCoreClock / 1000000));
     for (i = 0; ; i++)
@@ -1019,85 +997,84 @@ static void cliStatus(char *cmdline)
     }
     printf("\r\nCycle Time: %d, I2C Errors: %d\r\n\r\n", (int16_t)AvgCyclTime, i2cGetErrorCounter());
     EEPROMandFloppyStatusReport();
-    printf("SENSORS:");
-    printf("\r\nGyro ");
-    if(havel3g4200d) printMiscHdwnames(PRTL3G4200D);
-    else printMiscHdwnames(PRTMPU6050);
-    printf("\r\nActual");
+    printMiscCLITXT(PRTSENSORSGYRO);
+    if(havel3g4200d) printMiscCLITXT(PRTL3G4200D);
+    else printMiscCLITXT(PRTMPU6050);
+    printMiscCLITXT(PRTACTUAL);
     printxyzcalval(gyroZero);
     if (cfg.ShakyDataAvail)
     {
-        printf("\r\nFallback");
+        printMiscCLITXT(PRTFALLBACK);
         printxyzcalval(cfg.ShakyGyroZero);
     }
     printf("\r\nTemp: %d",(int32_t)telemTemperature1);
     if (sensors(SENSOR_ACC))
     {
-        printf("\r\n\r\nAcc ");
-        printMiscHdwnames(accHardware - 1);
-        printf("\r\nStatus: ");
+        printMiscCLITXT(PRTACC);
+        printMiscCLITXT(accHardware - 1);
+        printMiscCLITXT(PRTSTATUS);
         if(cfg.acc_calibrated)
         {
-            printf("calibrated");
+            printMiscCLITXT(PRTCALIBRATED);
             printxyzcalval(cfg.accZero);
             printf("\r\n1G val: %d", cfg.sens_1G);
         }
-        else cliRecal();
+        else printMiscCLITXT(PRTNEEDCAL);
     }
     if (sensors(SENSOR_MAG))
     {
-        printf("\r\n\r\nMag ");
-        printMiscHdwnames(PRTHMC5883);
-        printf("\r\nStatus: ");
+        printMiscCLITXT(PRTMAG);
+        printMiscCLITXT(PRTHMC5883);
+        printMiscCLITXT(PRTSTATUS);
         if (cfg.mag_calibrated)
         {
-            printf("calibrated");
+            printMiscCLITXT(PRTCALIBRATED);
             printxyzcalval(cfg.magZero);
             for (i = 0; i < 3; i++) printf("\r\n%c Gain*1000: %d", X++, (int32_t)(magCal[i] * 1000));
         }
-        else cliRecal();
-        printf("\r\nGain ");
+        else printMiscCLITXT(PRTNEEDCAL);
+        printMiscCLITXT(PRTGAIN);
         if (maggainok) printf("OK"); else printf("NOT OK");
     }
     if (sensors(SENSOR_BARO))
     {
-        printf("\r\n\r\nBaro ");
-        if(baro.baro_type == 1) printMiscHdwnames(PRTBMP085);
-        else printMiscHdwnames(PRTMS5611);
+        printMiscCLITXT(PRTBARO);
+        if(baro.baro_type == 1) printMiscCLITXT(PRTBMP085);
+        else printMiscCLITXT(PRTMS5611);
         printf("\r\nTemp: %d",(int32_t)BaroActualTemp);
     }
-    printf("\r\n\r\nSTATS:");
+    printMiscCLITXT(PRTSTATS);
     if (sensors(SENSOR_BARO) || sensors(SENSOR_GPS))
     {
         if (sensors(SENSOR_GPS))
         {
-            printf("\r\nGPS:");
+            printMiscCLITXT(PRTGPS);
             tmpu16 = (uint16_t)((float)cfg.MAXGPSspeed * 0.036f);
             printf("\r\nMax Dist: %d m", cfg.GPS_MaxDistToHome );
             printf("\r\nMax Speed: %dcm/s = %dKm/h", cfg.MAXGPSspeed, tmpu16);
         }
         if (sensors(SENSOR_BARO))
         {
-            printf("\r\nHight:");
+            printMiscCLITXT(PRTHIGHT);
             printf("\r\nMax Alt AGL: %d m", cfg.MaxAltMeter);
             printf("\r\nMin Alt AGL: %d m", cfg.MinAltMeter);
         }
     }
-    printf("\r\nMotor:\r\n");
+    printMiscCLITXT(PRTMOTOR);
     printf("Actual Range: %d - %d at %d Hz PWM.\r\n", cfg.esc_min, cfg.esc_max, cfg.esc_pwm);
     tmpu16 = (cfg.esc_max - cfg.esc_min) / 100;
     if(motorpercent[0])
     {
         k = min(NumberOfMotors, MAX_MONITORED_MOTORS);
         for (i = 0; i < k; i++) printf("Mot: %d Session Usage: %d%% Abs PWM: %d Rel to PWM range: %d%%\r\n", i + 1, motorpercent[i], motorabspwm[i],(motorabspwm[i] - cfg.esc_min) / tmpu16);
-    } else printf("No Stats\r\n");
+    } else printMiscCLITXT(PRTNOSTATS);
 }
 
 static void cliWpflush(char *cmdline)
 {
     EEPROMandFloppyStatusReport();
     FloppyClear();
-    printf("Flushing.\r\n\r\n");
+    printMiscCLITXT(PRTFLUSHING);
     EEPROMandFloppyStatusReport();
 }
 
@@ -1234,15 +1211,15 @@ RestartLCD:                                                             // c++ d
     }
     delay(500);
     LCDclear();
-    printf(" Rebooting and ");
+    printMiscCLITXT(PRTLCDREBOOT);
     LCDline2();
     switch (exitLCD)
     {
     case 1:
-        printf(" NOT Saving");
+        printMiscCLITXT(PRTLCDNOTSAVING);
         break;
     case 2:
-        printf("!!!!!Saving!!!!!");
+        printMiscCLITXT(PRTSAVING);
         writeParams(0);
         break;
     }
@@ -1341,7 +1318,7 @@ static void LCDline2(void)                                              // Sets 
     {
         SendSerialLCDCmdFE(CursorLine2);
         delay(LCDdelay);
-        printf("                ");                                     // Clear Line
+        printMiscCLITXT(PRTLCDCLEARLINE);                               // Clear Line
         SendSerialLCDCmdFE(CursorLine2);                                // Cursor moved, reset it.
     }
     delay(LCDdelay);    
@@ -1353,11 +1330,11 @@ void cliProcess(void)
     char   cliBuffer[48], dummy;
     writeAllMotors(cfg.esc_moff);                                       // Set all motors to OFF just to be sure if user is messing in cli without saving
     memset(cliBuffer, 0, sizeof(cliBuffer));
-    uartPrint("\r\nEntering CLI Mode, type 'exit' or 'save' to return, or 'help' \r\n\r\n");
+    printMiscCLITXT(PRTENTERINGCLIMODE);
     cliVersion(&dummy);
     uartPrint("\r\n\r\n");
     cliHelp(&dummy);
-    cliPrompt();
+    printMiscCLITXT(PRTCLIPROMPT);
     for(; ;)                                                            // CLI ENDLESS LOOP THAT SAVES STACK
     {
         while (uartAvailable())
@@ -1394,7 +1371,7 @@ void cliProcess(void)
                         uartPrint(cmd->name);
                         uartWrite('\t');
                     }
-                    cliPrompt();
+                    printMiscCLITXT(PRTCLIPROMPT);
                     i = 0;                                              // Redraw prompt
                 }
                 for (; i < bufferIndex; i++) uartWrite(cliBuffer[i]);
@@ -1407,22 +1384,22 @@ void cliProcess(void)
             else if (c == 12)                                           // clear screen
             {
                 uartPrint("\033[2J\033[1;1H");
-                cliPrompt();
+                printMiscCLITXT(PRTCLIPROMPT);
             }
             else if (bufferIndex && (c == '\n' || c == '\r'))           // enter pressed
             {
                 clicmd_t *cmd = NULL;
                 clicmd_t target;
-                uartPrintCR();
+                PrintCR();
                 cliBuffer[bufferIndex] = 0;                             // null terminate
                 target.name  = cliBuffer;
                 target.param = NULL;
                 cmd = bsearch(&target, cmdTable, CMD_COUNT, sizeof cmdTable[0], cliCompare);
                 if (cmd) cmd->func(cliBuffer + strlen(cmd->name) + 1);
-                else cliErrorMessage();
+                else printMiscCLITXT(PRTHARAKIRIERROR);
                 memset(cliBuffer, 0, sizeof(cliBuffer));
                 bufferIndex = 0;
-                cliPrompt();
+                printMiscCLITXT(PRTCLIPROMPT);
             }
             else if (c == 127)
             {
@@ -1446,17 +1423,17 @@ void cliProcess(void)
 // TestScan on the I2C bus
 // ************************************************************************************************************
 #define MMA8452_ADDRESS     0x1C
-#define HMC5883L_ADDRESS    0x1E                        // 0xA
-#define DaddyW_SONAR        0x20                        // Daddy Walross Sonar
-#define EagleTreePowerPanel 0x3B                        // Eagle Tree Power Panel
-#define OLD1_ADDRESS        0x3C                        // OLED at address 0x3C in 7bit
-#define OLD2_ADDRESS        0x3D                        // OLED at address 0x3D in 7bit
+#define HMC5883L_ADDRESS    0x1E                                        // 0xA
+#define DaddyW_SONAR        0x20                                        // Daddy Walross Sonar
+#define EagleTreePowerPanel 0x3B                                        // Eagle Tree Power Panel
+#define OLD1_ADDRESS        0x3C                                        // OLED at address 0x3C in 7bit
+#define OLD2_ADDRESS        0x3D                                        // OLED at address 0x3D in 7bit
 #define ADXL345_ADDRESS     0x53
-#define BMA180_ADDRESS      0x64                        // don't respond ??
-#define MPU6050_ADDRESS     0x68                        // 0x75     or 0x68  0x15
-#define L3G4200D_ADDRESS    0x68                        // 0x0f
-#define BMPandMS_ADDRESS    0x77                        // 0xD0
-#define MBandSRF_ADDRESS    0x70                        // Devantech I2C SONAR, Standard address 0x70 (SRF02, SRF235, SRF08, SRF10)
+#define BMA180_ADDRESS      0x64                                        // don't respond ??
+#define MPU6050_ADDRESS     0x68                                        // 0x75     or 0x68  0x15
+#define L3G4200D_ADDRESS    0x68                                        // 0x0f
+#define BMPandMS_ADDRESS    0x77                                        // 0xD0
+#define MBandSRF_ADDRESS    0x70                                        // Devantech I2C SONAR, Standard address 0x70 (SRF02, SRF235, SRF08, SRF10)
 
 /*
 new May 15 2013 Johannes && Some stuff from me as well :)
@@ -1466,13 +1443,13 @@ static void cliScanbus(char *cmdline)
     bool    ack, msbaro = false, L3G4200D = false;
     uint8_t address, nDevices = 0, sig, bufsnr[2];
 
-    uartPrint("\r\nScanning I2C-Bus\r\n\r\n");
-    i2cFastSpeed(false);                                // set I2C Standard mode
+    printMiscCLITXT(PRTSCANNINGICBUS);
+    i2cFastSpeed(false);                                                // set I2C Standard mode
     for(address = 1; address < 127; address++ )
     {
         sig = 0;
-        ack = i2cRead(address, address, 1, &sig);       // Do a blind read. Perhaps it's sufficient? Otherwise the hard way...
-        if(!ack)                                        // Try to get ack with more force
+        ack = i2cRead(address, address, 1, &sig);                       // Do a blind read. Perhaps it's sufficient? Otherwise the hard way...
+        if(!ack)                                                        // Try to get ack with more force
         {
             switch(address)
             {
@@ -1485,7 +1462,7 @@ static void cliScanbus(char *cmdline)
                 ack = i2cRead(DaddyW_SONAR, 0x32, 2, bufsnr);
                 break;
             case BMPandMS_ADDRESS:
-                ack = i2cRead(BMPandMS_ADDRESS, 0xA0, 1, &sig);  // Sig is irrelevant?
+                ack = i2cRead(BMPandMS_ADDRESS, 0xA0, 1, &sig);         // Sig is irrelevant?
                 msbaro = ack;
                 break;
             case MPU6050_ADDRESS:
@@ -1500,53 +1477,53 @@ static void cliScanbus(char *cmdline)
         }
         if (ack)
         {
-            uartPrint("I2C device at 0x");
-            if (address < 0x10) uartPrint("0");
+            printMiscCLITXT(PRTICDEVICEAT);
+            if (address < 0x10) uartWrite(0x30);                        // uartPrint("0");
             printf("%x probably ",address);
             switch (address)
             {
-            case MMA8452_ADDRESS:                       // Detection altered
-                printMiscHdwnames(PRTMMA8452);
+            case MMA8452_ADDRESS:                                       // Detection altered
+                printMiscCLITXT(PRTMMA8452);
                 break;
             case HMC5883L_ADDRESS:
-                printMiscHdwnames(PRTHMC5883);
+                printMiscCLITXT(PRTHMC5883);
                 break;
-            case DaddyW_SONAR:                          // Summarize as "Sonar"
+            case DaddyW_SONAR:                                          // Summarize as "Sonar"
             case MBandSRF_ADDRESS:
-                printMiscHdwnames(PRTSONAR);
+                printMiscCLITXT(PRTSONAR);
                 break;
-            case EagleTreePowerPanel:                   // Summarize as "Display"
+            case EagleTreePowerPanel:                                   // Summarize as "Display"
             case OLD1_ADDRESS:
             case OLD2_ADDRESS:
-                printMiscHdwnames(PRTOLED);
+                printMiscCLITXT(PRTOLED);
                 break;
-            case ADXL345_ADDRESS:                       // ADXL added
-                printMiscHdwnames(PRTADXL345);
+            case ADXL345_ADDRESS:                                       // ADXL added
+                printMiscCLITXT(PRTADXL345);
                 break;
-            case BMA180_ADDRESS:                        // Sensor currently not supported by a driver
-                printMiscHdwnames(PRTBMA180);
+            case BMA180_ADDRESS:                                        // Sensor currently not supported by a driver
+                printMiscCLITXT(PRTBMA180);
                 break;
             case MPU6050_ADDRESS:
-                if (L3G4200D) printMiscHdwnames(PRTL3G4200D);
-                else          printMiscHdwnames(PRTMPU6050);
+                if (L3G4200D) printMiscCLITXT(PRTL3G4200D);
+                else          printMiscCLITXT(PRTMPU6050);
                 break;
             case BMPandMS_ADDRESS:
-                if (msbaro) printMiscHdwnames(PRTMS5611);
-                else        printMiscHdwnames(PRTBMP085);
+                if (msbaro) printMiscCLITXT(PRTMS5611);
+                else        printMiscCLITXT(PRTBMP085);
                 break;
-            default:                                    // Unknown case added
-                printMiscHdwnames(PRTUNKNOWN);
+            default:                                                    // Unknown case added
+                printMiscCLITXT(PRTUNKNOWN);
                 break;
             }
-            uartPrintCR();
+            PrintCR();
             nDevices++;
         }
         delay(50);
     }
-    uartPrintCR();
-    i2cFastSpeed(true);                                 // set I2C I2C Fast mode
-    if (!nDevices) uartPrint("No I2C devices\r\n");
-    else printf("%d Devices\r\n",nDevices);
+    PrintCR();
+    i2cFastSpeed(true);                                                 // set I2C I2C Fast mode
+    if (!nDevices) printMiscCLITXT(PRTNOICDEVICE);
+    else printf("%d Devices\r\n", nDevices);
 }
 
 // ************************************************************************************************************
@@ -1559,9 +1536,9 @@ static void cliPassgps(char *cmdline)
     uint32_t wantedbaud = 0;
     bool     HaveMTK;
 
-    if (!feature(FEATURE_GPS))                          // Don't ask for sensors(gps) here, it may not be initialized
+    if (!feature(FEATURE_GPS))                                          // Don't ask for sensors(gps) here, it may not be initialized
     {
-        printf("GPS not enabled!\r\n");
+        printMiscCLITXT(PRTPSSGPSNOGPS);
         return;
     }
 
@@ -1570,22 +1547,13 @@ static void cliPassgps(char *cmdline)
 
     if (!strlen(cmdline))
     {
-        printf("Need option\r\n");
-        printf("Writing ubx conf with different baudsetting must fail.\r\n");
-        printf("Set Baud of planned config now. Repower after ucenter.\r\n");
-        printf("MTK go with '0', set type to NMEA, set Baud of FW.\r\n\r\n");
-        printf("Select Ublox Options\r\n\r\n");
-        printf("0 No Options. All GPS\r\n");
-        printf("1 UBX Force Sgnlstrngth\r\n");
-        printf("2 UBX 115K Bd\r\n");
-        printf("3 UBX  57K Bd\r\n");
-        printf("4 UBX  38K Bd\r\n");
-        printf("5 UBX  19K Bd\r\n\r\n");
-        if (HaveMTK) printf("Actual MTK 57K Bd.\r\n");// GPS_NMEA = 0, GPS_UBLOX = 1, GPS_MTK16 = 2, GPS_MTK19 = 3, GPS_UBLOX_DUMB = 4
+        printMiscCLITXT(PRTPSSGPSPREFACE);
+      
+        if (HaveMTK) printMiscCLITXT(PRTPSSGPSMTK57KBD);                // GPS_NMEA = 0, GPS_UBLOX = 1, GPS_MTK16 = 2, GPS_MTK19 = 3, GPS_UBLOX_DUMB = 4
         else
         {
-            if (!cfg.gps_type) printf("Actual NMEA");
-            else printf("Actual UBLOX");
+            if (!cfg.gps_type) printMiscCLITXT(PRTPSSGPSNMEA);
+            else printMiscCLITXT(PRTPSSGPSUBLOX);
             printf(" %d Bd.\r\n", cfg.gps_baudrate);
         }
     }
@@ -1593,7 +1561,7 @@ static void cliPassgps(char *cmdline)
     {
         if (HaveMTK && cmdline[0] != '0')
         {
-            cliErrorMessage();
+            printMiscCLITXT(PRTHARAKIRIERROR);
             return;
         }
         switch(cmdline[0])
@@ -1619,7 +1587,7 @@ static void cliPassgps(char *cmdline)
             wantedbaud = 19200;
             break;
         default:
-            cliErrorMessage();
+            printMiscCLITXT(PRTHARAKIRIERROR);
             return;
         }
 
@@ -1633,35 +1601,35 @@ static void cliPassgps(char *cmdline)
             }
         }
 
-        printf("\r\nProceeding. Close Terminal.");
+        printMiscCLITXT(PRTPSSGPSCLOSETERMINAL);
         delay(2000);
         HaveNewGpsByte = false;
-        serialInit(wantedbaud);                         // Set USB Baudrate
-        uart2Init(wantedbaud, GPSbyteRec, false);       // Set GPS Baudrate and callbackhandler
+        serialInit(wantedbaud);                                         // Set USB Baudrate
+        uart2Init(wantedbaud, GPSbyteRec, false);                       // Set GPS Baudrate and callbackhandler
         i = 0;
         while (i < 3)
         {
             if (uartAvailable())
             {
-                serbyte = uartRead();                   // Read from USB
-                if (serbyte == '\r') i++;               // Break out with 3 times RETURN
+                serbyte = uartRead();                                   // Read from USB
+                if (serbyte == '\r') i++;                               // Break out with 3 times RETURN
                 else i = 0;
-                uart2Write(serbyte);                    // Write to GPS
+                uart2Write(serbyte);                                    // Write to GPS
                 while (!uart2TransmitEmpty())
                 {
-                    ;                                   // wait for GPS Byte to be send
+                    ;                                                   // wait for GPS Byte to be send
                 }
                 LED1_TOGGLE
             }
             if (HaveNewGpsByte)
             {
-                serbyte        = NewGPSByte;            // Read from GPS
+                serbyte        = NewGPSByte;                            // Read from GPS
                 HaveNewGpsByte = false;
-                uartWrite(serbyte);                     // Write to USB
+                uartWrite(serbyte);                                     // Write to USB
                 LED0_TOGGLE
             }
         }
-        uartPrint("Rebooting");
+        printMiscCLITXT(PRTREBOOTING);
         systemReset(false);
     }
 }
@@ -1674,18 +1642,8 @@ static void GPSbyteRec(uint16_t c)
 
 static void cliFlash(char *cmdline)
 {
-    printf("Close terminal & flash\r\n");
-    systemReset(true);                                  // reboot to bootloader
-}
-
-static void cliErrorMessage(void)
-{
-    uartPrint("That was Harakiri, try 'help'");
-}
-
-static void cliRecal(void)
-{
-    uartPrint(" Needs Calibr.");
+    printMiscCLITXT(PRTCLSETERMANDFLASH);
+    systemReset(true);                                                  // reboot to bootloader
 }
 
 // MAVLINK STUFF AFFECTING CLI GOES HERE
@@ -1693,7 +1651,7 @@ bool baseflight_mavlink_send_paramlist(bool Reset)
 {
     static  int16_t i = 0;
     float   value = 0;
-    char    buf[17];                                    // Always send 16 chars reserve one zero byte
+    char    buf[20];                                                    // Always send 16 chars reserve one zero byte + align to 32Bit
     mavlink_message_t msg;
     const   clivalue_t *tableptr;
 
@@ -1701,13 +1659,13 @@ bool baseflight_mavlink_send_paramlist(bool Reset)
     {
         i = 0;
         AllowProtocolAutosense = true;
-        return true;                                    // Return status not relevant but true because the "Reset" was a success
+        return true;                                                    // Return status not relevant but true because the "Reset" was a success
     }
-    AllowProtocolAutosense = false;                     // Block Autodetect during transmission
-    if(i < 0 || i > ((int16_t)VALUE_COUNT - 1)) return true; // Done with error but DONE
-    memset (buf, 0, 17);                                // Fill with 0 For Stringtermination
+    AllowProtocolAutosense = false;                                     // Block Autodetect during transmission
+    if(i < 0 || i > ((int16_t)VALUE_COUNT - 1)) return true;            // Done with error but DONE
+    memset (buf, 0, sizeof(buf));                                       // Fill with 0 For Stringtermination
     tableptr = &valueTable[i];
-    memcpy (buf, tableptr->name, min(strlen(tableptr->name), 16)); // Copy max 16 Bytes
+    memcpy (buf, tableptr->name, min(strlen(tableptr->name), 16));      // Copy max 16 Bytes
     switch(tableptr->type)
     {
     case VAR_UINT8:
@@ -1735,8 +1693,8 @@ bool baseflight_mavlink_send_paramlist(bool Reset)
     if (i == VALUE_COUNT)
     {
         i = 0;
-        AllowProtocolAutosense = true;                  // Allow Autodetection again
-        return true;                                    // I am done
+        AllowProtocolAutosense = true;                                  // Allow Autodetection again
+        return true;                                                    // I am done
     }
     else return false;
 }
@@ -1749,7 +1707,7 @@ bool baseflight_mavlink_set_param(mavlink_param_set_t *packet)
     bool     returnval = false;
     float    value;
 
-    if (strcmp(packet->param_id, ""))                   // Filter trash Message here
+    if (strcmp(packet->param_id, ""))                                   // Filter trash Message here
     {
         for (i = 0; i < VALUE_COUNT; i++)
         {

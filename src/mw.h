@@ -185,14 +185,15 @@ enum                                        // This is limited to 32 Boxes!!
     CHECKBOXITEMS
 };
 
-// MiscHdw & MiscHdwnames are just for CLI Prinout
+// MiscCLItxt are just for CLI Prinout
+// This way we force most CLI text to stay in EEPROM and reduce compiler adding padbytes for alignment each time.
 enum                                        // Keep the liststart in line with typedef enum AccelSensors in board.h
 {
-    PRTADXL345  = 0,
-    PRTMPU6050,
-    PRTMMA8452,
-    PRTBMA280,
-    PRTMPU6500,
+    PRTADXL345 = 0,                         // Keep that here
+    PRTMPU6050,                             // Keep that here
+    PRTMMA8452,                             // Keep that here
+    PRTBMA280,                              // Keep that here
+    PRTMPU6500,                             // Keep that here
     PRTBMA180,
     PRTL3G4200D,
     PRTMS5611,
@@ -201,15 +202,74 @@ enum                                        // Keep the liststart in line with t
     PRTSONAR,
     PRTHMC5883,
     PRTUNKNOWN,
-    PRTHDWITEMS
+    PRTSTATUS,
+    PRTCALIBRATED,
+    PRTNEEDCAL,
+    PRTAUXSETPREFACE,
+    PRTAUXSETAUXWIPED,
+    PRTAUXSETIDAUXCHAN,
+    PRTAUXSETREMOVING,
+    PRTAUXSETSETTING,
+    PRTCMIXFRAME,
+    PRTCMIXSANITY,
+    PRTCMIXERROR,
+    PRTCMIXOUTOFRANGE,
+    PRTRESETTODEFAULT,
+    PRTREBOOTING,
+    PRTEXITCLIWOSAVING,
+    PRTSAVING,
+    PRTHARAKIRIERROR,
+    PRTENTERINGCLIMODE,
+    PRTSCANNINGICBUS,
+    PRTICDEVICEAT,
+    PRTNOICDEVICE,
+    PRTPSSGPSNOGPS,
+    PRTPSSGPSPREFACE,
+    PRTPSSGPSMTK57KBD,
+    PRTPSSGPSNMEA,
+    PRTPSSGPSUBLOX,
+    PRTPSSGPSCLOSETERMINAL,
+    PRTCLSETERMANDFLASH,
+    PRTLCDREBOOT,
+    PRTLCDNOTSAVING,
+    PRTLCDCLEARLINE,
+    PRTENABLEDFEATURES,
+    PRTAVAILFEATURES,
+    PRTDISABLED,
+    PRTENABLED,
+    PRTAVAILCOMMANDS,
+    PRTRCMAPORDER,
+    PRTRCMAPASSIGNMENT,
+    PRTMIXERAVAIL,
+    PRTMIXERCURRENT,
+    PRTMIXERINVALID,
+    PRTMIXERSETTO,
+    PRTCURRENTSETTINGS,
+    PRTSENSORSGYRO,
+    PRTACTUAL,
+    PRTFALLBACK,
+    PRTACC,
+    PRTMAG,
+    PRTGAIN,
+    PRTBARO,
+    PRTSTATS,
+    PRTGPS,
+    PRTHIGHT,
+    PRTMOTOR,
+    PRTNOSTATS,
+    PRTFLUSHING,
+    PRTEEPROM,
+    PRTCONFIGFW,
+    PRTCLIPROMPT,
+    PRTCLIITEMS
 };
 
-static const char MiscHdwnames[] =          // Keep the liststart in line with typedef enum AccelSensors in board.h
-    "ADXL345;"
-    "MPU6050;"
-    "MMA8452;"
-    "BMA280;"
-    "MPU6500;"
+static const char MiscCLItext[] =           // Keep the liststart in line with typedef enum AccelSensors in board.h
+    "ADXL345;"                              // Keep that here
+    "MPU6050;"                              // Keep that here
+    "MMA8452;"                              // Keep that here
+    "BMA280;"                               // Keep that here
+    "MPU6500;"                              // Keep that here
     "BMA180;"
     "L3G4200D;"
     "MS5611;"
@@ -217,7 +277,79 @@ static const char MiscHdwnames[] =          // Keep the liststart in line with t
     "OLED;"
     "SONAR;"
     "HMC5883;"
-    "UNKNOWN;";
+    "UNKNOWN;"
+    "\r\nStatus: ;"
+    "calibrated;"
+    " Needs Calibr.;"
+    "\r\nSet: auxset ID aux state(H/M/L)\r\n"
+    "Remove: auxset -ID etc\r\n"
+    "Wipe all: auxset --\r\n"
+    "Ex: auxset 1 4 h Sets Box 1 to Aux4 High\r\n\r\n;"
+    "AUX Wiped\r\n;"
+    "ID AUXCHAN  ;"
+    "Removing ;"
+    "Setting ;"
+    "Custom mixer: \r\nMotor\tThr\tRoll\tPitch\tYaw\r\n;"
+    "Sanity:\t\t;"
+    "Invalid number of arguments\r\n;"
+    "Motor out of range 1 - ;"
+    "Reset to default;"
+    "\r\nRebooting;"
+    "\r\nLeaving CLI mode without saving\r\n;"
+    "!!!!!Saving!!!!!;"
+    "That was Harakiri, try 'help';"
+    "\r\nEntering CLI Mode, type 'exit' or 'save' to return, or 'help' \r\n\r\n;"
+    "\r\nScanning I2C-Bus\r\n\r\n;"
+    "I2C device at 0x;"
+    "No I2C devices\r\n;"
+    "GPS not enabled!\r\n;"
+    "Need option\r\n"
+    "Writing ubx conf with different baudsetting must fail.\r\n"
+    "Set Baud of planned config now. Repower after ucenter.\r\n"
+    "MTK go with '0', set type to NMEA, set Baud of FW.\r\n\r\n"
+    "Select Ublox Options\r\n\r\n"
+    "0 No Options. All GPS\r\n"
+    "1 UBX Force Sgnlstrngth\r\n"
+    "2 UBX 115K Bd\r\n"
+    "3 UBX  57K Bd\r\n"
+    "4 UBX  38K Bd\r\n"
+    "5 UBX  19K Bd\r\n\r\nActual ;"
+    "MTK 57K Bd.\r\n;"
+    "NMEA;"
+    "UBLOX;"
+    "\r\nProceeding. Close Terminal.;"
+    "Close terminal & flash\r\n;"
+    " Rebooting and ;"
+    " NOT Saving;"
+    "                ;"
+    "Enabled features: ;"
+    "Available features: \r\n;"
+    "Disabled ;"
+    "Enabled ;"
+    "Available commands:\r\n\r\n;"
+    "Must be any order of AETR1234\r\n;"
+    "Current assignment: ;"
+    "Available mixers: ;"
+    "Current mixer: ;"
+    "Invalid mixer type...\r\n;"
+    "Mixer set to ;"
+    "Current settings: \r\n;"
+    "SENSORS:\r\nGyro ;"
+    "\r\nActual;"
+    "\r\nFallback;"
+    "\r\n\r\nAcc ;"
+    "\r\n\r\nMag ;"
+    "\r\nGain ;"
+    "\r\n\r\nBaro ;"
+    "\r\n\r\nSTATS:;"
+    "\r\nGPS:;"
+    "\r\nHight:;"
+    "\r\nMotor:\r\n;"
+    "No Stats\r\n;"
+    "Flushing.\r\n\r\n;"
+    "EEPROM:\r\n;"
+    "Config:\r\nFW: ;"
+    "\r\n# ;";
 
 static const char boxnames[] =
     "ANGLE;"
