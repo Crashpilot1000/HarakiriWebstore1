@@ -1327,6 +1327,7 @@ static void LCDline2(void)                                              // Sets 
 void cliProcess(void)
 {
     static uint32_t bufferIndex = 0;
+    uint32_t i;                                                         // just for calming down " -Wextra" GCC compiler option
     char   cliBuffer[48], dummy;
     writeAllMotors(cfg.esc_moff);                                       // Set all motors to OFF just to be sure if user is messing in cli without saving
     memset(cliBuffer, 0, sizeof(cliBuffer));
@@ -1343,7 +1344,7 @@ void cliProcess(void)
             if (c == '\t' || c == '?')
             {
                 const clicmd_t *cmd, *pstart = NULL, *pend = NULL;      // do tab completion
-                int i = bufferIndex;
+                i = bufferIndex;
                 for (cmd = cmdTable; cmd < cmdTable + CMD_COUNT; cmd++)
                 {
                     if (bufferIndex && (strncasecmp(cliBuffer, cmd->name, bufferIndex) != 0)) continue;

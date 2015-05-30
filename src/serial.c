@@ -255,7 +255,7 @@ static void evaluateCommand(void)
         break;
     case MSP_RC:
         headSerialReply((cfg.rc_auxch + 4) * 2);
-        for (i = 0; i < cfg.rc_auxch + 4; i++) serialize16(rcDataSAVE[i]); // Put out raw values
+        for (i = 0; i < (uint32_t)cfg.rc_auxch + 4; i++) serialize16(rcDataSAVE[i]); // Put out raw values and calm down " -Wextra" GCC compiler option
         break;
     case MSP_RAW_GPS:
         headSerialReply(14);

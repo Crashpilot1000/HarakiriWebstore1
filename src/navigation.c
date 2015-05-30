@@ -319,7 +319,7 @@ void GPS_set_pids(void)                                                         
     navPID_PARAM.Imax          = posholdPID_PARAM.Imax;
     
     GPSRAWtoRAD                = 0.0000001f * (float)M_PI / 180.0f;
-//    OneCmTo[LAT]               = 1.0f / MagicEarthNumber;                       // Moves North one cm
+//    OneCmTo[LAT]               = 1.0f / MagicEarthNumber;                     // Moves North one cm
     maxbank10                  = (int16_t)cfg.gps_maxangle * 10;                // Initialize some values here
     maxbank100                 = (int16_t)cfg.gps_maxangle * 100;
     maxbankbrake100            = (int16_t)cfg.gps_ph_brakemaxangle * 100;
@@ -387,7 +387,7 @@ bool DoingGPS(void)
 bool check_missed_wp(void)
 {
     int32_t temp = wrap_18000(target_bearing - original_target_bearing);
-    return (abs_int(temp) > 10000);                                                 // we passed the waypoint by 100 degrees
+    return (abs_int(temp) > 10000);                                             // we passed the waypoint by 100 degrees
 }
 
 void GPS_calc_longitude_scaling(bool force)
@@ -401,7 +401,7 @@ void GPS_calc_longitude_scaling(bool force)
         rads = fabsf((float)Real_GPS_coord[LAT] * GPSRAWtoRAD);
         CosLatScaleLon = cosf(rads);                                            // can only be 0 at 90 degree, perhaps at the poles?
         if (!CosLatScaleLon) CosLatScaleLon = 0.001745328f;                     // Avoid divzero (value is cos of 89.9 Degree)
-//        OneCmTo[LON] = 1.0f / (MagicEarthNumber * CosLatScaleLon);              // Moves EAST one cm
+//        OneCmTo[LON] = 1.0f / (MagicEarthNumber * CosLatScaleLon);            // Moves EAST one cm
     }
 }
 

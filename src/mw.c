@@ -971,11 +971,6 @@ void loop(void)
     cfg.gt_pwr            = 0;  [0..10] Strength of adjustment
 */
 
-static bool EqualSigns16(int16_t a, int16_t b)
-{
-    return ((a ^ b) >= 0);                                                      // Bitwise XOR. Double 1 = 0 Double 0 = 0, so will be the sign bit...
-}
-
 static void calculate_Gtune(bool inirun, uint8_t ax)
 {
     static  int8_t time_skip[3];
@@ -1032,7 +1027,7 @@ static void calculate_Gtune(bool inirun, uint8_t ax)
                 if (cfg.gt_hilimP[ax] && error && OldError[ax] && error != OldError[ax]) // Don't run when not needed or pointless to do so
                 {
                     diff_G = (int16_t)(abs_int((int32_t)error) - abs_int((int32_t)OldError[ax]));
-                    if (EqualSigns16(error, OldError[ax]))                      // if ((error > 0 && OldError[ax] > 0) || (error < 0 && OldError[ax] < 0))
+                    if ((error ^ OldError[ax]) >= 0)                            // Bitwise XOR. Double 1 = 0 Double 0 = 0 and so will be the sign bit. So "true" if same "sign"/"direction"
                     {
                         if (diff_G > threshP) result_P64[ax] += 64 + cfg.gt_pwr;// Shift balance a little on the plus side.
                         else

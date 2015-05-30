@@ -383,7 +383,9 @@ void Baro_update(void)                                            // Note Pressu
         baro.get_up();                                            // Readout Pressure
         baroDeadline    = 0;                                      // Don't use delay between read. Cycletime is enough. Before: TimeNowMicros + baro.repeat_delay - 1;
         ActualPressure  = baro.calculate();                       // ActualPressure needed by mavlink
-        BaroSpikeTab[0] = (1.0f - powf(ActualPressure / 101325.0f, 0.190295f)) * 4433000.0f; // I stick to the "slower", method - gives better results.
+// This is the float version: BaroSpikeTab[0] = (1.0f - powf(ActualPressure / 101325.0f, 0.190295f)) * 4433000.0f;
+// But I stick to the double float calculation for now.
+        BaroSpikeTab[0] = (1.0 - pow((double)ActualPressure / 101325.0, 0.190295)) * 4433000.0; // I stick to the longer & slower, method - gives better results.
         BaroSpikeTab[4] = BaroSpikeTab[0];
         while(!rdy)                                               // Spikefilter now
         {
