@@ -114,13 +114,14 @@ ARCH_FLAGS	 = -mthumb -mcpu=cortex-m3
 CFLAGS		 = $(ARCH_FLAGS) \
 		   $(addprefix -D,$(OPTIONS)) \
 		   $(addprefix -I,$(INCLUDE_DIRS)) \
-		   -Os \
-		   -Wall -Wdouble-promotion \
-		   -ffunction-sections \
-		   -fdata-sections \
-		   -DSTM32F10X_MD \
-		   -DUSE_STDPERIPH_DRIVER \
-		   -D$(TARGET)
+           -Os \
+           -Wall \
+           -Wdouble-promotion \
+           -ffunction-sections \
+           -fdata-sections \
+           -DSTM32F10X_MD \
+           -DUSE_STDPERIPH_DRIVER \
+           -D$(TARGET)
 
 ASFLAGS		 = $(ARCH_FLAGS) \
 		   -x assembler-with-cpp \
