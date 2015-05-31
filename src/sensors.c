@@ -348,71 +348,54 @@ void Gyro_getADC(void)
 }
 
 #ifdef BARO
+
+#define AbsAltExponent 1.0 / 5.255
 void Baro_update(void)                                            // Note Pressure is now global for telemetry 1hPa = 1mBar
 {
-    static float    BaroTab[5], BaroSpikeTab[5];                  // Note: We don't care about runup bufferstate since first 50 runs are discarded anyway
-    static uint32_t LastGeneraltime;
+    static int32_t  BaroSpikeTab10[5];                            // Note: We don't care about runup bufferstate since first 50 runs are discarded anyway
+    static uint32_t LastGeneraltime, LastDataOutPut = 0;
     static uint16_t baroDeadline = 0;
-    static uint8_t  state = 0, Bidx = 0, SkipCnt = 0;
-    float           temp;
-    bool            rdy = false;
-    uint8_t         i, maxsortidx = 4;
+    static uint8_t  state = 0;
+    int32_t lastval10;
 
-    newbaroalt = false;                                           // Reset Newbarovalue since it's iterative and not interrupt driven it's OK
     if (micros() - LastGeneraltime < baroDeadline) return;        // Make it rollover friendly
-
-    switch (state)
+    switch (state)                                                // Statemachine to schedule Baro I2C actions
     {
     case 0:
         baro.start_ut();                                          // Temperature Conversion start
-        LastGeneraltime = micros();
-        baroDeadline    = baro.ut_delay - 1;
-        SkipCnt = 0;                                              // Reset Skipcounter, reduces 27ms delay to average 20ms delay for ms baro (37Hz to 50Hz)
-        state++;
+        baroDeadline = baro.ut_delay;
         break;
     case 1:
         baro.get_ut();                                            // Readout Temp fall through case
-        state++;
-    case 2:
         baro.start_up();                                          // Pressure Conversion start
-        LastGeneraltime = micros();
-        baroDeadline    = baro.up_delay - 1;
-        state++;
+        baroDeadline = baro.up_delay;
         break;
-    case 3:
+    case 2:
         baro.get_up();                                            // Readout Pressure
-        baroDeadline    = 0;                                      // Don't use delay between read. Cycletime is enough. Before: TimeNowMicros + baro.repeat_delay - 1;
-        ActualPressure  = baro.calculate();                       // ActualPressure needed by mavlink
-// This is the float version: BaroSpikeTab[0] = (1.0f - powf(ActualPressure / 101325.0f, 0.190295f)) * 4433000.0f;
-// But I stick to the double float calculation for now.
-        BaroSpikeTab[0] = (1.0 - pow((double)ActualPressure / 101325.0, 0.190295)) * 4433000.0; // I stick to the longer & slower, method - gives better results.
-        BaroSpikeTab[4] = BaroSpikeTab[0];
-        while(!rdy)                                               // Spikefilter now
-        {
-            rdy = true;
-            for (i = 0; i < maxsortidx; i++)
-            {
-                temp = BaroSpikeTab[i];
-                if (temp > BaroSpikeTab[i + 1])
-                {
-                    BaroSpikeTab[i]     = BaroSpikeTab[i + 1];
-                    BaroSpikeTab[i + 1] = temp;
-                    rdy = false;
-                }
-            }
-            maxsortidx --;
-        }
-        BaroTab[Bidx] = BaroSpikeTab[2]; Bidx++;
-        if (Bidx == 5) Bidx = 0;
-        BaroAlt = 0;
-        for (i = 0; i < 5; i++) BaroAlt += BaroTab[i];
-        BaroAlt *= 0.2f;
-        SkipCnt++;
-        if (SkipCnt == 2 || baro.baro_type == 1) state = 0;       // Read new Temp every 2nd run gives us little more speed without loosing resolution. However it worsens BMP - so not done there // baro_type: 1 = BMP 2 = MS
-        else state = 2;
-        newbaroalt = true;
+        if (baro.baro_type == 1) baroDeadline = 3000;             // BMP needs recreation
+        else baroDeadline = 0;                                    // No additional time for MS5611
         break;
     }
+    LastGeneraltime = micros();                                   // Timestamp after I2C actions
+    if (state == 2)
+    {
+        state = 0;                                                // Reset statemachine
+        ActualPressure = baro.calculate();                        // ActualPressure needed by mavlink
+        lastval10 = BaroSpikeTab10[2];                            // Save lastval from spiketab
+        FiveElementSpikeFilterINT32((1.0 - pow((double)ActualPressure / 101325.0, AbsAltExponent)) * 44330000.0, BaroSpikeTab10);
+        BaroAlt = (float)(BaroSpikeTab10[2] + lastval10) * 0.05f;
+        newbaroalt = true;
+        if (!GroundAltInitialized)
+        {
+            if (!LastDataOutPut)
+            {
+                LastDataOutPut = LastGeneraltime;
+                return;
+            }
+            BaroDtUS = LastGeneraltime - LastDataOutPut;
+            LastDataOutPut = LastGeneraltime;
+        }
+    } else state++;
 }
 #endif
 

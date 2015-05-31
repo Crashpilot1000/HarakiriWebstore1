@@ -17,6 +17,7 @@ float   BaroAlt, EstAlt, AltHold, vario;
 int32_t sonarAlt;
 int16_t BaroP, BaroI, BaroD;
 bool    newbaroalt = false, GroundAltInitialized = false;
+uint16_t BaroDtUS = 0;
 
 // **************
 // gyro+acc IMU
@@ -180,19 +181,14 @@ void getEstimatedAltitude(void)
 {
     static int8_t   VarioTab[VarioTabsize];
     static uint8_t  Vidx = 0, IniStep = 0, IniCnt = 0;
-    static uint32_t LastBarotime = 0;
     static float    AvgHz = 0.0f, LastEstAltBaro = 0.0f, SNRcorrect, SNRavg = 0.0f;
     float           NewVal, EstAltBaro;
-    uint32_t        TimeTemp;
     uint8_t         i;
 
     if (!GroundAltInitialized)
     {
         if (newbaroalt)
         {
-            TimeTemp     = micros();
-            NewVal       = (float)(TimeTemp - LastBarotime);
-            LastBarotime = TimeTemp;
             switch(IniStep)                                                   // Casemachine here for further extension
             {
             case 0:
@@ -207,7 +203,7 @@ void getEstimatedAltitude(void)
                 break;
             case 1:
                 GroundAlt += BaroAlt;
-                AvgHz     += NewVal;
+                AvgHz     += BaroDtUS;
                 IniCnt++;
                 if (IniCnt == 50)                                             // Gather 50 values
                 {
@@ -267,6 +263,7 @@ void getEstimatedAltitude(void)
             }
         }
     }
+    newbaroalt = false;                                                       // Reset Newbarovalue since it's iterative and not interrupt driven it's OK
 }
 
 void getAltitudePID(void)                                                     // I put this out of getEstimatedAltitude seems logical

@@ -44,7 +44,7 @@ bool ms5611Detect(baro_t *baro)
         if (k == 10) break;                                      // Try 10 times to get correct Calibrationdata
     }
     while (!ms5611_crc_ok());
-    baro->ut_delay   = 9040;                                     // baro->ut_delay = 10000;
+    baro->ut_delay   = 9040;                                     // baro->ut_delay = 10000; Datasheet: max 9.04 ms
     baro->up_delay   = 9040;                                     // baro->up_delay = 10000; // Not used baro->repeat_delay = 1; baro->repeat_delay = 4000;
     baro->baro_type  = 2;    
     baro->start_ut   = ms5611_start_ut;

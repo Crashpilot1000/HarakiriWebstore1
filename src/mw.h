@@ -656,6 +656,7 @@ extern int16_t  BaroI;
 extern int16_t  BaroD;
 extern bool     newbaroalt;
 extern bool     GroundAltInitialized;
+extern uint16_t BaroDtUS;
 
 extern int16_t  motor[MAX_MOTORS];
 extern int16_t  servo[8];
@@ -770,6 +771,7 @@ int32_t  SpecialIntegerRoundUp(float val);
 float    constrain_flt(float amt, float low, float high);
 int32_t  constrain_int(int32_t amt, int32_t low, int32_t high);
 int32_t  abs_int(int32_t x);
+void     FiveElementSpikeFilterINT32(int32_t newval, int32_t *array);
 
 // IMU
 void     computeIMU(void);

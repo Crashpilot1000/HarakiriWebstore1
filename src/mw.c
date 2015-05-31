@@ -472,6 +472,10 @@ void loop(void)
         DoLEDandBUZZER();                                                       // Do that, if not doing RC stuff
     }
 
+#ifdef BARO
+    if (sensors(SENSOR_BARO)) Baro_update();
+#endif
+    
 #ifdef SONAR
     if (sensors(SENSOR_SONAR)) Sonar_update();                                  // Update "SonarStatus". Do it here because damn HC-SR04 will block a little
 #endif
@@ -488,11 +492,8 @@ void loop(void)
         computeIMU();                                                           // looptime Timeloop starts here on predefined basis
 
 #ifdef BARO
-        if (sensors(SENSOR_BARO))                                               // The normal stuff to keep it simple
-        {
-            Baro_update();
-            getEstimatedAltitude();                                             // Combine with sonar if possible
-        }
+        if (sensors(SENSOR_BARO)) getEstimatedAltitude();                       // Combine with sonar if possible
+
 
 #define HoverTimeBeforeLand     2000                                            // Wait 2 sec in the air for VirtualThrottle to catch up
         if (sensors(SENSOR_BARO) && f.BARO_MODE && f.ARMED)                     // GroundAltInitialized must not be checked but armed, in case of dumb user -> see above
@@ -1191,6 +1192,30 @@ float abs_flt(float x)
     return conv.f;
 }
 */
+
+void FiveElementSpikeFilterINT32(int32_t newval, int32_t *array)
+{
+    uint8_t sortidx, maxsortidx = 4;
+    int32_t extmp;
+    bool    rdy = false;
+    array[0] = newval;
+    array[4] = newval;
+    while(!rdy)
+    {
+        rdy = true;
+        for (sortidx = 0; sortidx < maxsortidx; sortidx++)
+        {
+            extmp = array[sortidx];
+            if (extmp > array[sortidx + 1])
+            {
+                array[sortidx]     = array[sortidx + 1];
+                array[sortidx + 1] = extmp;
+                rdy = false;
+            }
+        }
+        maxsortidx --;
+    }
+}
 
 /*
 ****************************************************************************

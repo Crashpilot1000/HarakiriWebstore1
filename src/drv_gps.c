@@ -159,7 +159,6 @@ static bool GPS_MTK_newFrame(uint8_t data);
 static bool GPS_NMEA_newFrame(char c);
 static bool GPS_UBLOX_newFrame(uint8_t data);
 static bool GPS_newFrame(char c);
-static void FiveElementSpikeFilterINT32(int32_t newval, int32_t *array);
 
 void DoChkGPSDeadin50HzLoop(void)                                                   // Check this in a 50Hz loop in mainprogram
 {
@@ -723,29 +722,4 @@ reset:
         GPS_Present = 1;
     }
     return parsed;
-}
-
-// Also gets rid of "glitches" though ublox KF doesn't do that
-static void FiveElementSpikeFilterINT32(int32_t newval, int32_t *array)
-{
-    uint8_t sortidx, maxsortidx = 4;
-    int32_t extmp;
-    bool    rdy = false;
-    array[0] = newval;
-    array[4] = newval;
-    while(!rdy)
-    {
-        rdy = true;
-        for (sortidx = 0; sortidx < maxsortidx; sortidx++)
-        {
-            extmp = array[sortidx];
-            if (extmp > array[sortidx + 1])
-            {
-                array[sortidx]     = array[sortidx + 1];
-                array[sortidx + 1] = extmp;
-                rdy = false;
-            }
-        }
-        maxsortidx --;
-    }
 }
