@@ -495,13 +495,13 @@ static void Mag_42Hz_AVG(float *xyztmp, uint16_t count)
     }
 }
 
-static void Mag_Calibration(void)                                 // Called from XHz loop normally....
-{
 #define MAGmaxcount      500                                      // Take 500 samples at 10Hz rate i.e 50Sec
 #define MAGerror       10000
 #define MAGdiscardcnt     50
 #define sflsdelta         0.0f
 #define maxiterations    100
+static void Mag_Calibration(void)                                 // Called from XHz loop normally....
+{
     float xyz[3], x_sumplain = 0.0f, x_sumsq = 0.0f, x_sumcube = 0.0f, y_sumplain = 0.0f, y_sumsq = 0.0f;
     float y_sumcube = 0.0f, z_sumplain = 0.0f, z_sumsq = 0.0f, z_sumcube = 0.0f, xy_sum = 0.0f;
     float xz_sum = 0.0f, yz_sum = 0.0f, x2y_sum = 0.0f, x2z_sum = 0.0f, y2x_sum = 0.0f, y2z_sum = 0.0f;

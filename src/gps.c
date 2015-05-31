@@ -8,7 +8,7 @@ float     waypoint_speed_gov;                                 // used for slow s
 uint32_t  wp_distance             = GPSDistErrorVal;
 int32_t   target_bearing          = GPSBearingErrorVal;       // target_bearing is where we should be heading
 int32_t   nav_bearing             = GPSBearingErrorVal;       // This is the angle from the copter to the "next_WP" location  with the addition of Crosstrack error in degrees * 100 // Crosstrack eliminated left here on purpose
-int16_t   nav_takeoff_heading     = GPSBearingErrorVal;       // saves the heading at takeof (1deg = 1) used to rotate to takeoff direction when arrives at home
+int16_t   nav_takeoff_heading     = 0;                        // saves the heading at takeof (1deg = 1) used to rotate to takeoff direction when arrives at home
 int32_t   original_target_bearing = GPSBearingErrorVal;       // deg*100, The original angle to the next_WP when the next_WP was set Also used to check when we pass a WP
 float     LocError[2] = {GPSDistErrorVal, GPSDistErrorVal};   // updated after GPS read - 5-10hz Error in cm from target
 

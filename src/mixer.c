@@ -302,7 +302,9 @@ void mixTableAndWriteMotors(void)
 
     if (feature(FEATURE_SERVO_TILT))                                              // do camstab
     {
-        int32_t aux[2] = {cfg.gbl_pmd, cfg.gbl_rmd};
+        int32_t aux[2];
+        aux[0] = cfg.gbl_pmd;
+        aux[1] = cfg.gbl_rmd;
         if ((cfg.gbl_flg & GIMBAL_NORMAL) || (cfg.gbl_flg & GIMBAL_TILTONLY)) aux[0] += rcData[AUX3] - cfg.rc_mid;
         if (!(cfg.gbl_flg & GIMBAL_DISABLEAUX34)) aux[1] += rcData[AUX4] - cfg.rc_mid;
 

@@ -1,17 +1,6 @@
 #include "board.h"
 #include "mw.h"
 
-typedef struct fp_vector
-{
-    float X, Y, Z;
-} t_fp_vector_def;
-
-typedef union
-{
-    float A[3];
-    t_fp_vector_def V;
-} t_fp_vector;
-
 float   accSmooth[3], ACC_speed[2] = { 0, 0 }, accADC[3], gyroADC[3], magADCfloat[3], angle[2] = { 0, 0 }; // absolute angle inclination in multiple of 0.1 degree    180 deg = 1800
 float   BaroAlt, EstAlt, AltHold, vario;
 int32_t sonarAlt;
@@ -22,10 +11,11 @@ uint16_t BaroDtUS = 0;
 // **************
 // gyro+acc IMU
 // **************
-static void RotGravAndMag(struct fp_vector *Grav, struct fp_vector *Mag, float *delta)// Rotate vectors according to the gyro delta
+
+static void RotGravAndMag(float *Grav, float *Mag, float *delta)              // Rotate vectors according to the gyro delta
 {
-    struct    fp_vector v_tmp = *Grav;
-    float     mat[3][3], cosx, sinx, cosy, siny, cosz, sinz, coszcosx, sinzcosx, coszsinx, sinzsinx;
+    float tmp[3], mat[3][3], cosx, sinx, cosy, siny, cosz, sinz, coszcosx, sinzcosx, coszsinx, sinzsinx;
+    uint8_t i;
     cosx      =  cosf(-delta[PITCH]);
     sinx      =  sinf(-delta[PITCH]);
     cosy      =  cosf(delta[ROLL]);
@@ -45,24 +35,18 @@ static void RotGravAndMag(struct fp_vector *Grav, struct fp_vector *Mag, float *
     mat[2][0] =  coszcosx * siny + sinzsinx;
     mat[2][1] =  sinzcosx * siny - coszsinx;
     mat[2][2] =  cosy * cosx;
-    Grav->X   =  v_tmp.X * mat[0][0] + v_tmp.Y * mat[1][0] + v_tmp.Z * mat[2][0];
-    Grav->Y   =  v_tmp.X * mat[0][1] + v_tmp.Y * mat[1][1] + v_tmp.Z * mat[2][1];
-    Grav->Z   =  v_tmp.X * mat[0][2] + v_tmp.Y * mat[1][2] + v_tmp.Z * mat[2][2];
-    if (cfg.mag_calibrated)                                                   // mag_calibrated can just be true if MAG present
-    {
-        v_tmp  = *Mag;                                                        // Proceed here if mag present and calibrated
-        Mag->X = v_tmp.X * mat[0][0] + v_tmp.Y * mat[1][0] + v_tmp.Z * mat[2][0];// saves recalculating matrix values
-        Mag->Y = v_tmp.X * mat[0][1] + v_tmp.Y * mat[1][1] + v_tmp.Z * mat[2][1];
-        Mag->Z = v_tmp.X * mat[0][2] + v_tmp.Y * mat[1][2] + v_tmp.Z * mat[2][2];
-    }
+    for (i = 0; i < 3; i++) tmp[i] = Grav[i];
+    for (i = 0; i < 3; i++) Grav[i] = tmp[0] * mat[0][i] + tmp[1] * mat[1][i] + tmp[2] * mat[2][i];
+    if (!cfg.mag_calibrated) return;                                          // mag_calibrated can just be true if MAG present
+    for (i = 0; i < 3; i++) tmp[i] = Mag[i];
+    for (i = 0; i < 3; i++) Mag[i] = tmp[0] * mat[0][i] + tmp[1] * mat[1][i] + tmp[2] * mat[2][i];
 }
 
 // *Somehow* modified by me..
 #define OneGcmss        980.665f                                              // 1G in cm/(s*s)
 void computeIMU(void)
 {
-    static t_fp_vector EstG, EstM;
-    static float    cms[3] = {0.0f, 0.0f, 0.0f}, Tilt_25deg, AccScaleCMSS;
+    static float    EstG[3], EstM[3], cms[3] = {0.0f, 0.0f, 0.0f}, Tilt_25deg, AccScaleCMSS;
     static float    INV_GY_CMPF, INV_GY_CMPFM, ACC_GPS_RC, ACC_ALT_RC, ACC_RC;
     static uint32_t prevT, UpsDwnTimer, SQ1G;
     static bool     init = false;
@@ -99,8 +83,8 @@ void computeIMU(void)
         for (i = 0; i < 3; i++)                                               // Preset some values to reduce runup time
         {
             accSmooth[i] = accADC[i];
-            EstG.A[i]    = accSmooth[i];
-            EstM.A[i]    = magADCfloat[i];                                    // Using /2 for more stability
+            EstG[i]      = accSmooth[i];
+            EstM[i]      = magADCfloat[i];                                    // Using /2 for more stability
         }
     }
     CmsFac = ACCDeltaTimeINS * AccScaleCMSS;                                  // We need that factor for INS below
@@ -111,18 +95,18 @@ void computeIMU(void)
         DeltGyRad[i]  = (ACCDeltaTimeINS * (gyroADC[i] * GyroScale16)) * 0.0625f;// GyroScale16 is in 16 * rad/s
         tmpu32       += (int32_t)accSmooth[i] * (int32_t)accSmooth[i];        // Accumulate ACC magnitude there
     }
-    RotGravAndMag(&EstG.V, &EstM.V, DeltGyRad);                               // Rotate Grav & Mag together to avoid doublecalculation
+    RotGravAndMag(EstG, EstM, DeltGyRad);                                     // Rotate Grav & Mag together to avoid doublecalculation
     tmpu32 = (tmpu32 * 100) / SQ1G;                                           // accMag * 100 / ((int32_t)acc_1G * acc_1G);
     if (72 < tmpu32 && tmpu32 < 133)                                          // Gyro drift correct between 0.85G - 1.15G
     {
-        for (i = 0; i < 3; i++) EstG.A[i] = (EstG.A[i] * (float)cfg.gy_gcmpf + accSmooth[i]) * INV_GY_CMPF;
+        for (i = 0; i < 3; i++) EstG[i] = (EstG[i] * (float)cfg.gy_gcmpf + accSmooth[i]) * INV_GY_CMPF;
     }
-    tmp[0]       = EstG.A[0] * EstG.A[0] + EstG.A[2] * EstG.A[2];             // Start Angle Calculation. tmp[0] is used for heading below
-    Norm         = sqrtf(tmp[0] + EstG.A[1] * EstG.A[1]);
+    tmp[0]       = EstG[0] * EstG[0] + EstG[2] * EstG[2];                     // Start Angle Calculation. tmp[0] is used for heading below
+    Norm         = sqrtf(tmp[0] + EstG[1] * EstG[1]);
     if(!Norm) return;                                                         // Should never happen but break here to prevent div-by-zero-evil
     Norm         = 1.0f / Norm;
-    rollRAD      =  atan2f(EstG.A[0] * Norm, EstG.A[2] * Norm);               // Norm seems to be obsolete, but testing shows different result :)
-    pitchRAD     = -asinf(constrain_flt(EstG.A[1] * Norm, -1.0f, 1.0f));      // Ensure range, eliminate rounding stuff that might occure.
+    rollRAD      =  atan2f(EstG[0] * Norm, EstG[2] * Norm);                   // Norm seems to be obsolete, but testing shows different result :)
+    pitchRAD     = -asinf(constrain_flt(EstG[1] * Norm, -1.0f, 1.0f));        // Ensure range, eliminate rounding stuff that might occure.
     cr           = cosf(rollRAD);
     sr           = sinf(rollRAD);
     cp           = cosf(pitchRAD);
@@ -141,10 +125,10 @@ void computeIMU(void)
         if(HaveNewMag)                                                        // Only do Complementary filter when new MAG data are available
         {
             HaveNewMag = false;
-            for (i = 0; i < 3; i++) EstM.A[i] = (EstM.A[i] * (float)cfg.gy_mcmpf + magADCfloat[i]) * INV_GY_CMPFM;
+            for (i = 0; i < 3; i++) EstM[i] = (EstM[i] * (float)cfg.gy_mcmpf + magADCfloat[i]) * INV_GY_CMPFM;
         }
-        A = EstM.A[1] * tmp[0] - (EstM.A[0] * EstG.A[0] + EstM.A[2] * EstG.A[2]) * EstG.A[1];// Mwii method is more precise (less rounding errors)
-        B = EstM.A[2] * EstG.A[0] - EstM.A[0] * EstG.A[2];
+        A = EstM[1] * tmp[0] - (EstM[0] * EstG[0] + EstM[2] * EstG[2]) * EstG[1];// Mwii method is more precise (less rounding errors)
+        B = EstM[2] * EstG[0] - EstM[0] * EstG[2];
         heading = wrap_180(atan2f(B, A * Norm) * RADtoDEG + magneticDeclination);
         if (sensors(SENSOR_GPS) && !UpsideDown)
         {
@@ -195,7 +179,7 @@ void getEstimatedAltitude(void)
                 IniCnt++;
                 if(IniCnt == 50)                                              // Waste 50 Cycles to let things (buffers) settle then ini some vars and proceed
                 {
-                    for (i = 0; i < VarioTabsize; i++) VarioTab[i] = 0;
+                    memset(VarioTab, 0, sizeof(VarioTab));
                     EstAlt = GroundAlt = vario = 0;
                     IniCnt = 0;
                     IniStep++;

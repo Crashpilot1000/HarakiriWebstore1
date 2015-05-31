@@ -288,10 +288,10 @@ void i2c_clr_row(uint8_t row)
 // Input: int32_t value, digitnr to return (0-9) Note: The first digit of a decimal is number 0. BTW int32 has 10 decimals
 static unsigned char DigitToChar(int32_t input, uint8_t digitnr)
 {
-    int32_t pow10 = 1;
+    int32_t pow10 = 1, result;
     uint8_t exponent = digitnr;
     while (exponent--) pow10 *= 10;
-    int32_t result = input / pow10;
+    result = input / pow10;
     if (digitnr < 9) result -= (input / (pow10 * 10)) * 10;
     return '0' + result;
 }
