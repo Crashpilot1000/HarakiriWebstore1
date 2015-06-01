@@ -234,9 +234,7 @@ enum                                        // Keep the liststart in line with t
     PRTLCDNOTSAVING,
     PRTLCDCLEARLINE,
     PRTENABLEDFEATURES,
-    PRTAVAILFEATURES,
-    PRTDISABLED,
-    PRTENABLED,
+    PRTDISABLEDFEATURES,
     PRTAVAILCOMMANDS,
     PRTRCMAPORDER,
     PRTRCMAPASSIGNMENT,
@@ -322,10 +320,8 @@ static const char MiscCLItext[] =           // Keep the liststart in line with t
     " Rebooting and ;"
     " NOT Saving;"
     "                ;"
-    "Enabled features: ;"
-    "Available features: \r\n;"
-    "Disabled ;"
-    "Enabled ;"
+    "Enabled features:;"
+    "Disabled features:;"
     "Available commands:\r\n\r\n;"
     "Must be any order of AETR1234\r\n;"
     "Current assignment: ;"

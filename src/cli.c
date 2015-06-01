@@ -129,7 +129,7 @@ const clicmd_t cmdTable[] =
     { "default", "load defaults & reboot",            cliDefault  },
     { "dump",    "dump config",                       cliDump     },
     { "exit",    "exit & reboot",                     cliExit     },
-    { "feature", "list or -val or val",               cliFeature  },
+    { "feature", "-val or val",                       cliFeature  },
     { "flash",   "flashmode",                         cliFlash    },
     { "help",    "this text",                         cliHelp     },
     { "map",     "mapping of rc channel order",       cliMap      },
@@ -694,63 +694,49 @@ static void cliFeature(char *cmdline)
 {
     uint32_t i;
     uint32_t len = strlen(cmdline);
-    uint32_t mask = featureMask();
+    uint32_t mask;
+    bool remove = false;
+    bool fpass  = feature(FEATURE_PASS);
 
     if (!len)
     {
+    PrintFeatures:
+        mask = featureMask();
         printMiscCLITXT(PRTENABLEDFEATURES);
         for (i = 0; ; i++)
         {
             if (featureNames[i] == NULL) break;
-            if (mask & (1 << i)) printf("%s ", featureNames[i]);
+            if (mask & (1 << i)) printf(" %s", featureNames[i]);
         }
         PrintCR();
-    }
-    else if (strncasecmp(cmdline, "list", len) == 0)
-    {
-        printMiscCLITXT(PRTAVAILFEATURES);
+        printMiscCLITXT(PRTDISABLEDFEATURES);
         for (i = 0; ; i++)
         {
             if (featureNames[i] == NULL) break;
-            printf("%s \r\n", featureNames[i]);
+            if (!(mask & (1 << i))) printf(" %s", featureNames[i]);
         }
         PrintCR();
+        if (fpass != feature(FEATURE_PASS)) cfg.pass_mot = 0;       // Reset to all motors if feature pass was changed
         return;
     }
-    else
+    if (cmdline[0] == '-')
     {
-        bool remove = false;
-        bool fpass  = feature(FEATURE_PASS);
-        if (cmdline[0] == '-')
+        remove = true;                                              // remove feature
+        cmdline++;                                                  // skip over -
+        len--;
+    }
+    for (i = 0; ; i++)
+    {
+        if (featureNames[i] == NULL)
         {
-            remove = true;                                              // remove feature
-            cmdline++;                                                  // skip over -
-            len--;
+            printMiscCLITXT(PRTHARAKIRIERROR);                      // uartPrint("Invalid feature name\r\n");
+            break;
         }
-
-        for (i = 0; ; i++)
+        if (!strncasecmp(cmdline, featureNames[i], len))
         {
-            if (featureNames[i] == NULL)
-            {
-                printMiscCLITXT(PRTHARAKIRIERROR);                      // uartPrint("Invalid feature name\r\n");
-                break;
-            }
-            if (strncasecmp(cmdline, featureNames[i], len) == 0)
-            {
-                if (remove)
-                {
-                    featureClear(1 << i);
-                    printMiscCLITXT(PRTDISABLED);
-                }
-                else
-                {
-                    featureSet(1 << i);
-                    printMiscCLITXT(PRTENABLED);
-                }
-                if (fpass != feature(FEATURE_PASS)) cfg.pass_mot = 0;   // Reset to all motors if feature pass was changed
-                printf("%s\r\n", featureNames[i]);
-                break;
-            }
+            if (remove) featureClear(1 << i);
+            else featureSet(1 << i);
+            goto PrintFeatures;
         }
     }
 }
@@ -1356,33 +1342,23 @@ void cliProcess(void)
                     for (; ; bufferIndex++)
                     {
                         if (pstart->name[bufferIndex] != pend->name[bufferIndex]) break;
-                        if (!pstart->name[bufferIndex])
+                        if (!pstart->name[bufferIndex] && bufferIndex < sizeof(cliBuffer) - 2)
                         {
                             cliBuffer[bufferIndex++] = ' ';             // Unambiguous -- append a space */
+                            cliBuffer[bufferIndex]   = 0;               // Termination with zero
                             break;
                         }
                         cliBuffer[bufferIndex] = pstart->name[bufferIndex];
                     }
                 }
-                if (!bufferIndex || pstart != pend)
-                {
-                    uartPrint("\r\033[K");                              // Print list of ambiguous matches
-                    for (cmd = pstart; cmd <= pend; cmd++)
-                    {
-                        uartPrint(cmd->name);
-                        uartWrite('\t');
-                    }
-                    printMiscCLITXT(PRTCLIPROMPT);
-                    i = 0;                                              // Redraw prompt
-                }
                 for (; i < bufferIndex; i++) uartWrite(cliBuffer[i]);
             }
-            else if (!bufferIndex && c == 4)
+            else if (!bufferIndex && c == 4)                            // 4 = End Of Transmission (EOT)
             {
                 cliExit(cliBuffer);
                 return;
             }
-            else if (c == 12)                                           // clear screen
+            else if (c == 12)                                           // FF = Form Feed = New page = Clear screen
             {
                 uartPrint("\033[2J\033[1;1H");
                 printMiscCLITXT(PRTCLIPROMPT);
@@ -1395,14 +1371,14 @@ void cliProcess(void)
                 cliBuffer[bufferIndex] = 0;                             // null terminate
                 target.name  = cliBuffer;
                 target.param = NULL;
-                cmd = bsearch(&target, cmdTable, CMD_COUNT, sizeof cmdTable[0], cliCompare);
+                cmd = bsearch(&target, cmdTable, CMD_COUNT, sizeof(cmdTable[0]), cliCompare);
                 if (cmd) cmd->func(cliBuffer + strlen(cmd->name) + 1);
                 else printMiscCLITXT(PRTHARAKIRIERROR);
                 memset(cliBuffer, 0, sizeof(cliBuffer));
                 bufferIndex = 0;
                 printMiscCLITXT(PRTCLIPROMPT);
             }
-            else if (c == 127)
+            else if (c == 127)                                          // <DEL>
             {
                 if (bufferIndex)                                        // backspace
                 {
@@ -1410,9 +1386,9 @@ void cliProcess(void)
                     uartPrint("\010 \010");
                 }
             }
-            else if (bufferIndex < sizeof(cliBuffer) && c >= 32 && c <= 126)
+            else if (bufferIndex < sizeof(cliBuffer) && c >= 32 && c <= 126)// Range of printable characters
             {
-                if (!bufferIndex && c == 32) continue;
+                if (!bufferIndex && c == 32) continue;                  // <SPACE>
                 cliBuffer[bufferIndex++] = c;
                 uartWrite(c);
             }
