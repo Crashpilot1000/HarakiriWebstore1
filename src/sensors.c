@@ -375,8 +375,7 @@ void Baro_update(void)                                            // Note Pressu
         break;
     case 2:
         baro.get_up();                                            // Readout Pressure
-        if (baro.baro_type == 1) baroDeadline = 2950;             // BMP needs recreation
-        else baroDeadline = 910;                                  // Ensure a constant time for MS as well
+        baroDeadline = baro.rep_delay;
         break;
     }
     LastGeneraltime = micros();                                   // Timestamp after I2C actions

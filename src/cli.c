@@ -1039,7 +1039,7 @@ static void cliStatus(char *cmdline)
     if (sensors(SENSOR_BARO))
     {
         printMiscCLITXT(PRTBARO);
-        if(baro.baro_type == 1) printMiscCLITXT(PRTBMP085);
+        if(baro.rep_delay == BMP085REPEATDELAY) printMiscCLITXT(PRTBMP085);
         else printMiscCLITXT(PRTMS5611);
         printf("\r\nTemp: %d",(int32_t)BaroActualTemp);
     }

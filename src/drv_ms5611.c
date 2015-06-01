@@ -46,7 +46,7 @@ bool ms5611Detect(baro_t *baro)
     while (!ms5611_crc_ok());
     baro->ut_delay   = 9040;                                     // baro->ut_delay = 10000; Datasheet: max 9.04 ms
     baro->up_delay   = 9040;                                     // baro->up_delay = 10000; // Not used baro->repeat_delay = 1; baro->repeat_delay = 4000;
-    baro->baro_type  = 2;    
+    baro->rep_delay  = MS5611REPEATDELAY;                        // defined in board.h
     baro->start_ut   = ms5611_start_ut;
     baro->get_ut     = ms5611_get_ut;
     baro->start_up   = ms5611_start_up;

@@ -187,7 +187,7 @@ void getEstimatedAltitude(void)
                 break;
             case 1:
                 GroundAlt += BaroAlt;
-                AvgHz     += 1000000.0f / BaroDtUS;
+                AvgHz     += 1000000.0f / BaroDtUS;                           // Note: BaroDtUS can't be zero since it is initialized in the settle loop.
                 IniCnt++;
                 if (IniCnt == 50)                                             // Gather 50 values
                 {

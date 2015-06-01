@@ -50,7 +50,7 @@ bool bmp085Detect(baro_t *baro)
         bmp085_get_cal_param();                                                  /* readout bmp085 calibparam structure */
         baro->ut_delay  = 4500;                                                  // Crashpilot OSS 3 TIMINGS
         baro->up_delay  = 22500;                                                 // Crashpilot Too fast but BMP does that!
-        baro->baro_type = 1;                                                     // 1 = BMP 2 = MS
+        baro->rep_delay = BMP085REPEATDELAY;                                     // defined in board.h
         baro->start_ut  = bmp085_start_ut;
         baro->get_ut    = bmp085_get_ut;
         baro->start_up  = bmp085_start_up;

@@ -21,6 +21,10 @@
 #define M_PI       3.14159265358979323846f
 #endif
 
+// Baro Predef
+#define BMP085REPEATDELAY  2950                             // BMP is also recognized by that number later in CLI
+#define MS5611REPEATDELAY  910
+
 // Precalculated is better for gcc
 #define RADX        0.017453292519f                         // #define RADX            M_PI / 180.0f
 #define RADX10      0.001745329252f                         // #define RADX10          M_PI / 1800.0f
@@ -104,7 +108,7 @@ typedef struct baro_t
 {
     uint16_t ut_delay;
     uint16_t up_delay;
-    uint8_t  baro_type;                                     // 1 = BMP 2 = MS
+    uint16_t rep_delay;
     sensorInitFuncPtr start_ut;
     sensorInitFuncPtr get_ut;
     sensorInitFuncPtr start_up;
