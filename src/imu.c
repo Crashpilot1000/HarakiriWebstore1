@@ -35,10 +35,10 @@ static void RotGravAndMag(float *Grav, float *Mag, float *delta)              //
     mat[2][0] =  coszcosx * siny + sinzsinx;
     mat[2][1] =  sinzcosx * siny - coszsinx;
     mat[2][2] =  cosy * cosx;
-    for (i = 0; i < 3; i++) tmp[i] = Grav[i];
+    tmp[0] = Grav[0]; tmp[1] = Grav[1]; tmp[2] = Grav[2];                     // for (i = 0; i < 3; i++) tmp[i] = Grav[i];
     for (i = 0; i < 3; i++) Grav[i] = tmp[0] * mat[0][i] + tmp[1] * mat[1][i] + tmp[2] * mat[2][i];
     if (!cfg.mag_calibrated) return;                                          // mag_calibrated can just be true if MAG present
-    for (i = 0; i < 3; i++) tmp[i] = Mag[i];
+    tmp[0] = Mag[0]; tmp[1] = Mag[1]; tmp[2] = Mag[2];                        // for (i = 0; i < 3; i++) tmp[i] = Mag[i];
     for (i = 0; i < 3; i++) Mag[i] = tmp[0] * mat[0][i] + tmp[1] * mat[1][i] + tmp[2] * mat[2][i];
 }
 
@@ -187,12 +187,12 @@ void getEstimatedAltitude(void)
                 break;
             case 1:
                 GroundAlt += BaroAlt;
-                AvgHz     += BaroDtUS;
+                AvgHz     += 1000000.0f / BaroDtUS;
                 IniCnt++;
                 if (IniCnt == 50)                                             // Gather 50 values
                 {
                     GroundAlt *= 0.02f;
-                    AvgHz      = 50000000.0f / AvgHz;                         // Calculate Average Hz here since we skip Baro temp readout every 2nd read
+                    AvgHz     *= 0.02f;
                     GroundAltInitialized = true;
                     SonarStatus = 0;
                 }

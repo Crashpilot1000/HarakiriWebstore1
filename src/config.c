@@ -97,6 +97,11 @@ static void resetConf(void)
 //    featureSet(FEATURE_PASS);                   // Just pass Throttlechannel
 //    featureSet(FEATURE_SONAR);
 
+//    cfg.magZero[0]                = -81;          // Just for quick testing
+//    cfg.magZero[1]                = -69;          // Just for quick testing
+//    cfg.magZero[2]                = -3;           // Just for quick testing
+//    cfg.mag_calibrated            = 1;            // Just for quick testing
+
     cfg.P8[ROLL]                  =  35;        // 40
     cfg.I8[ROLL]                  =  30;
     cfg.D8[ROLL]                  =  30;

@@ -473,7 +473,7 @@ void loop(void)
     }
 
 #ifdef BARO
-    if (sensors(SENSOR_BARO)) Baro_update();
+    if (sensors(SENSOR_BARO)) Baro_update();                                    // We call this after each hefty calculation
 #endif
     
 #ifdef SONAR
@@ -492,8 +492,11 @@ void loop(void)
         computeIMU();                                                           // looptime Timeloop starts here on predefined basis
 
 #ifdef BARO
-        if (sensors(SENSOR_BARO)) getEstimatedAltitude();                       // Combine with sonar if possible
-
+        if (sensors(SENSOR_BARO))
+        {
+            Baro_update();                                                      // We call this after each hefty calculation
+            getEstimatedAltitude();                                             // Combine with sonar if possible
+        }
 
 #define HoverTimeBeforeLand     2000                                            // Wait 2 sec in the air for VirtualThrottle to catch up
         if (sensors(SENSOR_BARO) && f.BARO_MODE && f.ARMED)                     // GroundAltInitialized must not be checked but armed, in case of dumb user -> see above
@@ -774,6 +777,10 @@ void loop(void)
         else GPS_angle[0] = GPS_angle[1] = 0;                                   // Zero GPS influence on the ground
         BlockGPSAngles = false;
 
+#ifdef BARO
+        if (sensors(SENSOR_BARO)) Baro_update();                                // We call this after each hefty calculation
+#endif
+
         RCfactor        = ACCDeltaTimeINS / (MainDptCut + ACCDeltaTimeINS);     // For Dterm
         cTimeLessJitter = (uint16_t)FLOATcycleTime & (uint16_t)0xFFFC;          // Filter last 2 bit jitter for YAW
         gyroYwDiv4      = gyroADC[YAW];
@@ -902,6 +909,10 @@ void loop(void)
             else axisPIDflt[axis] = tmp0flt - DTerm;
             if (f.GTUNE && f.ARMED) calculate_Gtune(false, axis);
         }                                                                       // End of for loop for 2 axes (roll and pitch)
+
+#ifdef BARO
+        if (sensors(SENSOR_BARO)) Baro_update();                                // We call this after each hefty calculation
+#endif
 
         if (f.ARMED)
         {
