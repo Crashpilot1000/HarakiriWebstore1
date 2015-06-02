@@ -123,13 +123,13 @@ typedef struct
 
 const clicmd_t cmdTable[] =
 {
-    { "set",     "name=value or blank or * for list", cliSet      },
-    { "feature", "-val or val or --",                 cliFeature  },
+    { "set",     "set xy = xy or *",                  cliSet      },
+    { "feature", "-xy or xy or --",                   cliFeature  },
     { "auxset",  "Set Auxch",                         cliAuxset   },
     { "map",     "RC Chan Mapping",                   cliMap      },
-    { "mixer",   "Mixer Name or List",                cliMixer    },
+    { "mixer",   "Mix Name or List",                  cliMixer    },
     { "cmix",    "Set Custom Mix",                    cliCMix     },
-    { "status",  "Sys Status & Stats",                cliStatus   },
+    { "status",  "Sys Status&Stats",                  cliStatus   },
     { "passgps", "Pass GPS Data",                     cliPassgps  },
     { "scanbus", "Scan I2C",                          cliScanbus  },
     { "dump",    "Dump Config",                       cliDump     },
@@ -478,8 +478,8 @@ static void PrtBoxname(uint8_t number, bool fillup)                     // Print
             if (fillup) fillrest = true;
             else return;
         }
-        if (fillrest) uartWrite(0x20);                                  // 0x20 <SPACE>
-        else uartWrite(boxnames[srcptr]);
+        if (fillrest) printf(" ");                                      // uartWrite(0x20); 0x20 <SPACE>
+        else printf("%c", boxnames[srcptr]);                            // uartWrite(boxnames[srcptr]); uartWrite too fast 
         srcptr++;
     }
 }
@@ -747,9 +747,15 @@ static void cliFeature(char *cmdline)
 
 static void cliHelp(char *cmdline)
 {
-    uint32_t i = 0;
+    uint32_t i, k, len;
     printMiscCLITXT(PRTAVAILCOMMANDS);
-    for (i = 0; i < CMD_COUNT; i++) printf("%s\t %s\r\n", cmdTable[i].name, cmdTable[i].param);
+    for (i = 0; i < CMD_COUNT; i++)
+    {
+        printf("%s", cmdTable[i].name);
+        len = strlen(cmdTable[i].name);
+        if (len < 10) for (k = 0; k < 10 - len; k++) printf(" ");
+        printf("\t %s\r\n", cmdTable[i].param);
+    }
 }
 
 static void cliMap(char *cmdline)
@@ -1320,8 +1326,8 @@ static void LCDline2(void)                                              // Sets 
 #define CLIBufByteSize      48
 void cliProcess(void)
 {
-    uint32_t bufferIdx = 0;
-    uint8_t  c, i;
+    uint32_t bufferIdx = 0, i;
+    uint8_t  c;
     char     cliBuffer[CLIBufByteSize], dummy;
 
     writeAllMotors(cfg.esc_moff);                                       // Set all motors to OFF just to be sure if user is messing in cli without saving
