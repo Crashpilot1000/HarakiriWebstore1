@@ -116,31 +116,30 @@ const char * const sensorNames[] =
 
 typedef struct
 {
-    char *name;
-    char *param;
+    const char *name;
+    const char *param;
     void (*func)(char *cmdline);
 } clicmd_t;
 
-// should be sorted a..z for bsearch()
 const clicmd_t cmdTable[] =
 {
-    { "auxset",  "alternative to GUI",                cliAuxset   },
-    { "cmix",    "design custom mixer",               cliCMix     },
-    { "default", "load defaults & reboot",            cliDefault  },
-    { "dump",    "dump config",                       cliDump     },
-    { "exit",    "exit & reboot",                     cliExit     },
-    { "feature", "-val or val",                       cliFeature  },
-    { "flash",   "flashmode",                         cliFlash    },
-    { "help",    "this text",                         cliHelp     },
-    { "map",     "mapping of rc channel order",       cliMap      },
-    { "mixer",   "mixer name or list",                cliMixer    },
-    { "passgps", "pass through gps data",             cliPassgps  },
-    { "save",    "save and reboot",                   cliSave     },
-    { "scanbus", "scan i2c bus",                      cliScanbus  },
     { "set",     "name=value or blank or * for list", cliSet      },
-    { "status",  "sys status & stats",                cliStatus   },
+    { "feature", "-val or val or --",                 cliFeature  },
+    { "auxset",  "Set Auxch",                         cliAuxset   },
+    { "map",     "RC Chan Mapping",                   cliMap      },
+    { "mixer",   "Mixer Name or List",                cliMixer    },
+    { "cmix",    "Set Custom Mix",                    cliCMix     },
+    { "status",  "Sys Status & Stats",                cliStatus   },
+    { "passgps", "Pass GPS Data",                     cliPassgps  },
+    { "scanbus", "Scan I2C",                          cliScanbus  },
+    { "dump",    "Dump Config",                       cliDump     },
+    { "default", "Reset Config",                      cliDefault  },
+    { "flash",   "Flashmode",                         cliFlash    },
+    { "wpflush", "Clear WP List",                     cliWpflush  },
+    { "save",    "Save & Reboot",                     cliSave     },        
+    { "exit",    "Exit & Reboot",                     cliExit     },
     { "version", "",                                  cliVersion  },
-    { "wpflush", "clear wp list",                     cliWpflush  },
+    { "help",    "",                                  cliHelp     },    
 };
 #define CMD_COUNT (sizeof(cmdTable) / sizeof(cmdTable[0]))
   
@@ -465,12 +464,6 @@ static void PrintCR(void)
     printf("\r\n");
 }
 
-static int cliCompare(const void *a, const void *b)
-{
-    const clicmd_t *ca = a, *cb = b;
-    return strncasecmp(ca->name, cb->name, strlen(cb->name));
-}
-
 #define MaxCharInline 8
 static void PrtBoxname(uint8_t number, bool fillup)                     // Prints Out Boxname, left aligned and 8 chars. Cropping or filling with blank may occur
 {
@@ -630,14 +623,19 @@ static void cliCMix(char *cmdline)
                 if (mixerNames[i] == NULL)
                 {
                     printMiscCLITXT(PRTHARAKIRIERROR);                  // uartPrint("Invalid mixer type...\r\n");
-                    break;
-                } else if (!strncasecmp(ptr, mixerNames[i], len))
+                    return;
+                } else if (!strncasecmp(ptr, mixerNames[i], len) && strlen(mixerNames[i]) == len) // Avoid loading a similar name like quad will load quadp user might want quadx
                 {
                     mixerLoadMix(i);
                     printf("Loaded %s mix\r\n", mixerNames[i]);
                     goto PrintCmix;                                     // goto is used to save codesize and avoid recursion "cliCMix("");"
                 }
             }
+        }
+        else
+        {
+            printMiscCLITXT(PRTHARAKIRIERROR);
+            return;
         }
     }
     else
@@ -673,6 +671,7 @@ static void cliCMix(char *cmdline)
 static void cliDefault(char *cmdline)
 {
     printMiscCLITXT(PRTRESETTODEFAULT);
+    printMiscCLITXT(PRTSAVING);
     checkFirstTime(true);
     printMiscCLITXT(PRTREBOOTING);
     systemReset(false);
@@ -721,6 +720,11 @@ static void cliFeature(char *cmdline)
     }
     if (cmdline[0] == '-')
     {
+        if (cmdline[1] == '-')
+        {
+            cfg.enabledFeatures = 0;                                // Clear all
+            goto PrintFeatures;                                     // Show result and done.
+        }
         remove = true;                                              // remove feature
         cmdline++;                                                  // skip over -
         len--;
@@ -736,7 +740,7 @@ static void cliFeature(char *cmdline)
         {
             if (remove) featureClear(1 << i);
             else featureSet(1 << i);
-            goto PrintFeatures;
+            goto PrintFeatures;                                     // Show result and done.
         }
     }
 }
@@ -815,7 +819,7 @@ static void cliMixer(char *cmdline)
 
 static void cliExit(char *cmdline)
 {
-    printMiscCLITXT(PRTEXITCLIWOSAVING);
+    printMiscCLITXT(PRTEXITWOSAVING);
     printMiscCLITXT(PRTREBOOTING);
     systemReset(false);                                                 // Just Reset without saving makes more sense
 }
@@ -1310,13 +1314,18 @@ static void LCDline2(void)                                              // Sets 
     delay(LCDdelay);    
 }
 
+#define IsPrintableChar(c)  ((c) >= 32 && (c) <= 126)
+#define IsSPACEChar(c)      ((c) == 32)
+#define IsENTERChar(c)      ((c) == 13 || (c) == 10)                    // CR LF 13 10 \r\n
+#define CLIBufByteSize      48
 void cliProcess(void)
 {
-    static uint32_t bufferIndex = 0;
-    uint32_t i;                                                         // just for calming down " -Wextra" GCC compiler option
-    char   cliBuffer[48], dummy;
+    uint32_t bufferIdx = 0;
+    uint8_t  c, i;
+    char     cliBuffer[CLIBufByteSize], dummy;
+
     writeAllMotors(cfg.esc_moff);                                       // Set all motors to OFF just to be sure if user is messing in cli without saving
-    memset(cliBuffer, 0, sizeof(cliBuffer));
+    memset(cliBuffer, 0, CLIBufByteSize);                               // Flush Buffer
     printMiscCLITXT(PRTENTERINGCLIMODE);
     cliVersion(&dummy);
     uartPrint("\r\n\r\n");
@@ -1326,71 +1335,24 @@ void cliProcess(void)
     {
         while (uartAvailable())
         {
-            uint8_t c = uartRead();
-            if (c == '\t' || c == '?')
+            c = uartRead();
+            if (IsPrintableChar(c))                                     // We only collect printable chars in Buffer
             {
-                const clicmd_t *cmd, *pstart = NULL, *pend = NULL;      // do tab completion
-                i = bufferIndex;
-                for (cmd = cmdTable; cmd < cmdTable + CMD_COUNT; cmd++)
-                {
-                    if (bufferIndex && (strncasecmp(cliBuffer, cmd->name, bufferIndex) != 0)) continue;
-                    if (!pstart) pstart = cmd;
-                    pend = cmd;
-                }
-                if (pstart)                                             // Buffer matches one or more commands
-                {
-                    for (; ; bufferIndex++)
-                    {
-                        if (pstart->name[bufferIndex] != pend->name[bufferIndex]) break;
-                        if (!pstart->name[bufferIndex] && bufferIndex < sizeof(cliBuffer) - 2)
-                        {
-                            cliBuffer[bufferIndex++] = ' ';             // Unambiguous -- append a space */
-                            cliBuffer[bufferIndex]   = 0;               // Termination with zero
-                            break;
-                        }
-                        cliBuffer[bufferIndex] = pstart->name[bufferIndex];
-                    }
-                }
-                for (; i < bufferIndex; i++) uartWrite(cliBuffer[i]);
-            }
-            else if (!bufferIndex && c == 4)                            // 4 = End Of Transmission (EOT)
+                if (!bufferIdx && IsSPACEChar(c)) continue;             // Ignore LEADING <SPACE>  go back to "while"
+                cliBuffer[bufferIdx++] = c;                             // Save new char in cliBuffer
+                bufferIdx = min(bufferIdx, CLIBufByteSize - 1);         // bufferIdx++ can NEVER exceed cliBuffer
+                printf("%c", c);                                        // echo the printable char here. Note: "uartWrite(c);" may be too fast
+            }                                                           // "else if" also ok
+            if (bufferIdx && IsENTERChar(c))                            // We have chars and a <RETURN>. So what is it?
             {
-                cliExit(cliBuffer);
-                return;
-            }
-            else if (c == 12)                                           // FF = Form Feed = New page = Clear screen
-            {
-                uartPrint("\033[2J\033[1;1H");
-                printMiscCLITXT(PRTCLIPROMPT);
-            }
-            else if (bufferIndex && (c == '\n' || c == '\r'))           // enter pressed
-            {
-                clicmd_t *cmd = NULL;
-                clicmd_t target;
                 PrintCR();
-                cliBuffer[bufferIndex] = 0;                             // null terminate
-                target.name  = cliBuffer;
-                target.param = NULL;
-                cmd = bsearch(&target, cmdTable, CMD_COUNT, sizeof(cmdTable[0]), cliCompare);
-                if (cmd) cmd->func(cliBuffer + strlen(cmd->name) + 1);
+                cliBuffer[bufferIdx] = 0;                               // Null terminate. bufferIdx is always in valid range
+                for (i = 0; i < CMD_COUNT; i++) if (!strncasecmp(cliBuffer, cmdTable[i].name, strlen(cmdTable[i].name))) break; // Check for match
+                if (i != CMD_COUNT) cmdTable[i].func(cliBuffer + strlen(cmdTable[i].name) + 1);// Heureka! Execute command.
                 else printMiscCLITXT(PRTHARAKIRIERROR);
-                memset(cliBuffer, 0, sizeof(cliBuffer));
-                bufferIndex = 0;
+                memset(cliBuffer, 0, CLIBufByteSize);                   // Flush cliBuffer for new command..
+                bufferIdx = 0;
                 printMiscCLITXT(PRTCLIPROMPT);
-            }
-            else if (c == 127)                                          // <DEL>
-            {
-                if (bufferIndex)                                        // backspace
-                {
-                    cliBuffer[--bufferIndex] = 0;
-                    uartPrint("\010 \010");
-                }
-            }
-            else if (bufferIndex < sizeof(cliBuffer) && c >= 32 && c <= 126)// Range of printable characters
-            {
-                if (!bufferIndex && c == 32) continue;                  // <SPACE>
-                cliBuffer[bufferIndex++] = c;
-                uartWrite(c);
             }
         }
     }

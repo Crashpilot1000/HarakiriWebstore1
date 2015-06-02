@@ -216,7 +216,7 @@ enum                                        // Keep the liststart in line with t
     PRTCMIXOUTOFRANGE,
     PRTRESETTODEFAULT,
     PRTREBOOTING,
-    PRTEXITCLIWOSAVING,
+    PRTEXITWOSAVING,
     PRTSAVING,
     PRTHARAKIRIERROR,
     PRTENTERINGCLIMODE,
@@ -291,9 +291,9 @@ static const char MiscCLItext[] =           // Keep the liststart in line with t
     "Sanity:\t\t;"
     "Invalid number of arguments\r\n;"
     "Motor out of range 1 - ;"
-    "Reset to default;"
+    "Reset to default\r\n;"
     "\r\nRebooting;"
-    "\r\nLeaving CLI mode without saving\r\n;"
+    "\r\nExit without saving\r\n;"
     "!!!!!Saving!!!!!;"
     "That was Harakiri, try 'help';"
     "\r\nEntering CLI Mode, type 'exit' or 'save' to return, or 'help' \r\n\r\n;"
