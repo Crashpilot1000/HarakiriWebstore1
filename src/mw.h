@@ -133,7 +133,7 @@ typedef enum GimbalFlags
     GIMBAL_TILTONLY     = 1 << 1,
     GIMBAL_DISABLEAUX34 = 1 << 2,
     GIMBAL_FORWARDAUX   = 1 << 3,
-    GIMBAL_MIXTILT      = 1 << 4,
+    GIMBAL_MIXTILT      = 1 << 4
 } GimbalFlags;
 
 /*********** RC alias *****************/
@@ -278,7 +278,7 @@ static const char MiscCLItext[] =           // Keep the liststart in line with t
     "UNKNOWN;"
     "\r\nStatus: ;"
     "calibrated;"
-    " Needs Calibr.;"
+    " Needs Calib;"
     "\r\nSet: auxset ID aux state(H/M/L)\r\n"
     "Remove: auxset -ID etc\r\n"
     "Wipe all: auxset --\r\n"
@@ -296,7 +296,7 @@ static const char MiscCLItext[] =           // Keep the liststart in line with t
     "\r\nExit without saving\r\n;"
     "!!!!!Saving!!!!!;"
     "That was Harakiri, try 'help';"
-    "\r\nEntering CLI Mode, type 'exit' or 'save' to return, or 'help' \r\n\r\n;"
+    "\r\n\r\nCLI Mode\r\n\r\n;"
     "\r\nScanning I2C-Bus\r\n\r\n;"
     "I2C device at 0x;"
     "No I2C devices\r\n;"
@@ -312,7 +312,7 @@ static const char MiscCLItext[] =           // Keep the liststart in line with t
     "3 UBX  57K Bd\r\n"
     "4 UBX  38K Bd\r\n"
     "5 UBX  19K Bd\r\n\r\nActual ;"
-    "MTK 57K Bd.\r\n;"
+    "MTK 57K Bd\r\n;"
     "NMEA;"
     "UBLOX;"
     "\r\nProceeding. Close Terminal.;"
@@ -327,7 +327,7 @@ static const char MiscCLItext[] =           // Keep the liststart in line with t
     "Current assignment: ;"
     "Available mixers: ;"
     "Current mixer: ;"
-    "Invalid mixer type...\r\n;"
+    "Invalid mixer type\r\n;"
     "Mixer set to ;"
     "Current settings: \r\n;"
     "SENSORS:\r\nGyro ;"
@@ -342,7 +342,7 @@ static const char MiscCLItext[] =           // Keep the liststart in line with t
     "\r\nHight:;"
     "\r\nMotor:\r\n;"
     "No Stats\r\n;"
-    "Flushing.\r\n\r\n;"
+    "Flushing\r\n\r\n;"
     "EEPROM:\r\n;"
     "Config:\r\nFW: ;"
     "\r\n# ;";

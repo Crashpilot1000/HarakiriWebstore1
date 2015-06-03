@@ -65,5 +65,6 @@ static void adxl345Read(int16_t *accelData)
 
 static void adxl345Align(int16_t *accData)
 {
+    (void)accData;
     // official direction is RPY, nothing to change here.
 }

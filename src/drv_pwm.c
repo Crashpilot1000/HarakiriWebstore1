@@ -362,6 +362,7 @@ void TIM4_IRQHandler(void)
 // Tested on: Frsky D8R-II and Frsky D4FR
 static void ppmCallback(uint8_t port, uint16_t capture)
 {
+    (void)port;
     uint16_t        newval = capture;
     static uint16_t last = 0, frametime = 0;
     static uint8_t  chan = 0, goodcnt = 0, frsky_problemcnt = 0;                    // Frsky 18ms on 8 Channel Problem Autodetection

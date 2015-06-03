@@ -60,7 +60,7 @@ typedef enum
     SENSOR_BARO  = 1 << 1,
     SENSOR_MAG   = 1 << 2,
     SENSOR_SONAR = 1 << 3,
-    SENSOR_GPS   = 1 << 4,
+    SENSOR_GPS   = 1 << 4
 } AvailableSensors;
 
 typedef enum AccelSensors
@@ -71,7 +71,7 @@ typedef enum AccelSensors
     ACC_MMA8452 = 3,
     ACC_BMA280  = 4,                                        // Unsupported here
     ACC_MPU6500 = 5,                                        // Unsupported here
-    ACC_NONE    = 6,
+    ACC_NONE    = 6
 } AccelSensors;
 
 typedef enum                                                // sync this with featureNames in cli.c
@@ -86,7 +86,7 @@ typedef enum                                                // sync this with fe
     FEATURE_FAILSAFE         = 1 <<  7,
     FEATURE_SONAR            = 1 <<  8,
     FEATURE_PASS             = 1 <<  9,
-    FEATURE_LCD              = 1 << 10,
+    FEATURE_LCD              = 1 << 10
 } AvailableFeatures;
 
 typedef void     (* sensorInitFuncPtr)(void);               // sensor init prototype

@@ -116,30 +116,30 @@ const char * const sensorNames[] =
 
 typedef struct
 {
+    void (*func)(char *cmdline);
     const char *name;
     const char *param;
-    void (*func)(char *cmdline);
 } clicmd_t;
 
 const clicmd_t cmdTable[] =
 {
-    { "set",     "set xy = xy or *",                  cliSet      },
-    { "feature", "-xy or xy or --",                   cliFeature  },
-    { "auxset",  "Set Auxch",                         cliAuxset   },
-    { "map",     "RC Chan Mapping",                   cliMap      },
-    { "mixer",   "Mix Name or List",                  cliMixer    },
-    { "cmix",    "Set Custom Mix",                    cliCMix     },
-    { "status",  "Sys Status&Stats",                  cliStatus   },
-    { "passgps", "Pass GPS Data",                     cliPassgps  },
-    { "scanbus", "Scan I2C",                          cliScanbus  },
-    { "dump",    "Dump Config",                       cliDump     },
-    { "default", "Reset Config",                      cliDefault  },
-    { "flash",   "Flashmode",                         cliFlash    },
-    { "wpflush", "Clear WP List",                     cliWpflush  },
-    { "save",    "Save & Reboot",                     cliSave     },        
-    { "exit",    "Exit & Reboot",                     cliExit     },
-    { "version", "",                                  cliVersion  },
-    { "help",    "",                                  cliHelp     },    
+    { cliSet,     "set",     "set xy = xy or *"   },
+    { cliFeature, "feature", "-xy or xy or --"    },
+    { cliAuxset,  "auxset",  "Set Auxch"          },
+    { cliMap,     "map",     "RC Chan Mapping"    },
+    { cliMixer,   "mixer",   "Mix Name or List"   },
+    { cliCMix,    "cmix",    "Set Custom Mix",    },
+    { cliStatus,  "status",  "Sys Status & Stats" },
+    { cliPassgps, "passgps", "Pass GPS Data"      },
+    { cliScanbus, "scanbus", "Scan I2C"           },
+    { cliDump,    "dump",    "Dump Conf"          },
+    { cliDefault, "default", "Reset Conf"         },
+    { cliFlash,   "flash",   "FlashFW"            },
+    { cliWpflush, "wpflush", "Clear WP List"      },
+    { cliSave,    "save",    "Save & Reboot"      },        
+    { cliExit,    "exit",    "Exit & Reboot"      },
+    { cliVersion, "version", ""                   },
+    { cliHelp,    "help",    ""                   },    
 };
 #define CMD_COUNT (sizeof(cmdTable) / sizeof(cmdTable[0]))
   
@@ -670,6 +670,7 @@ static void cliCMix(char *cmdline)
 
 static void cliDefault(char *cmdline)
 {
+    (void)cmdline;
     printMiscCLITXT(PRTRESETTODEFAULT);
     printMiscCLITXT(PRTSAVING);
     checkFirstTime(true);
@@ -747,6 +748,7 @@ static void cliFeature(char *cmdline)
 
 static void cliHelp(char *cmdline)
 {
+    (void)cmdline;
     uint32_t i, k, len;
     printMiscCLITXT(PRTAVAILCOMMANDS);
     for (i = 0; i < CMD_COUNT; i++)
@@ -825,6 +827,7 @@ static void cliMixer(char *cmdline)
 
 static void cliExit(char *cmdline)
 {
+    (void)cmdline;
     printMiscCLITXT(PRTEXITWOSAVING);
     printMiscCLITXT(PRTREBOOTING);
     systemReset(false);                                                 // Just Reset without saving makes more sense
@@ -832,6 +835,7 @@ static void cliExit(char *cmdline)
 
 void cliSave(char *cmdline)
 {
+    (void)cmdline;
     printMiscCLITXT(PRTSAVING);
     writeParams(0);
     printMiscCLITXT(PRTREBOOTING);
@@ -978,11 +982,12 @@ static void printxyzcalval(float *off)
 
 static void cliStatus(char *cmdline)
 {
+    (void)cmdline;
     uint8_t  i, k;
     uint32_t mask;
     uint16_t tmpu16;
     char     X = 'X';
-
+  
     printf("\r\nUptime: %d sec, Volt: %d * 0.1V (%dS battery)\r\n", currentTimeMS / 1000, vbat, batteryCellCount);
     mask = sensorsMask();
     printf("CPU %dMHz, detected sensors: ", (SystemCoreClock / 1000000));
@@ -1068,6 +1073,7 @@ static void cliStatus(char *cmdline)
 
 static void cliWpflush(char *cmdline)
 {
+    (void)cmdline;
     EEPROMandFloppyStatusReport();
     FloppyClear();
     printMiscCLITXT(PRTFLUSHING);
@@ -1076,6 +1082,7 @@ static void cliWpflush(char *cmdline)
 
 static void cliVersion(char *cmdline)
 {
+    (void)cmdline;
     uartPrint(FIRMWARE);
 }
 
@@ -1385,6 +1392,7 @@ new May 15 2013 Johannes && Some stuff from me as well :)
 */
 static void cliScanbus(char *cmdline)
 {
+    (void)cmdline;
     bool    ack, msbaro = false, L3G4200D = false;
     uint8_t address, nDevices = 0, sig, bufsnr[2];
 
@@ -1587,6 +1595,7 @@ static void GPSbyteRec(uint16_t c)
 
 static void cliFlash(char *cmdline)
 {
+    (void)cmdline;
     printMiscCLITXT(PRTCLSETERMANDFLASH);
     systemReset(true);                                                  // reboot to bootloader
 }
