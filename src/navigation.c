@@ -184,9 +184,9 @@ void GPS_distance_cm_bearing(int32_t *TrgtGPS, uint32_t *dist, int32_t *bearing)
     dLonRAW   *= GPSRAWtoRAD;                                               // dLatRAW = dLatRAW * GPSRAWtoRAD; // 10^7 DEGdelta to Rad
     lat1RAD    = Real_GPS_coord[LAT] * GPSRAWtoRAD;
     lat2RAD    = TrgtGPS[LAT]        * GPSRAWtoRAD;
-    Coslat2RAD = cosf(lat2RAD);
-    y          = sinf(dLonRAW) * Coslat2RAD;
-    x          = cosf(lat1RAD) * sinf(lat2RAD) - sinf(lat1RAD) * Coslat2RAD * cosf(dLonRAW);
+    Coslat2RAD = cosFAST(lat2RAD);
+    y          = sinFAST(dLonRAW) * Coslat2RAD;
+    x          = cosFAST(lat1RAD) * sinFAST(lat2RAD) - sinFAST(lat1RAD) * Coslat2RAD * cosFAST(dLonRAW);
     *bearing   = constrain_int((int32_t)(atan2f(y, x) * RADtoDEG100), -18000, 18000);
     if (*bearing < 0) *bearing += 36000;
 }
@@ -256,16 +256,16 @@ void GPS_calc_nav_rate(uint16_t max_speed)
     if ((abs_int(wrap_18000(target_bearing - original_target_bearing)) < 4500) && cfg.nav_ctrkgain != 0)// If we are too far off or too close we don't do track following
     {
         temp = (float)(target_bearing - original_target_bearing) * RADX100;
-        crosstrack_error = sinf(temp) * (float)wp_distance * cfg.nav_ctrkgain;  // Meters we are off track line
+        crosstrack_error = sinFAST(temp) * (float)wp_distance * cfg.nav_ctrkgain;// Meters we are off track line
         nav_bearing = target_bearing + constrain_int(crosstrack_error, -3000, 3000);
         while (nav_bearing <      0) nav_bearing += 36000;                      // nav_bearing = wrap_36000(nav_bearing);
         while (nav_bearing >= 36000) nav_bearing -= 36000;
     }
     else nav_bearing = target_bearing;
 
-    temp = (float)(9000l - nav_bearing) * RADX100;                              // nav_bearing and maybe crosstrack
-    trig[GPS_X] = cosf(temp);
-    trig[GPS_Y] = sinf(temp);
+    temp = (float)(9000 - nav_bearing) * RADX100;                               // nav_bearing and maybe crosstrack
+    trig[GPS_X] = cosFAST(temp);
+    trig[GPS_Y] = sinFAST(temp);
     for (axis = 0; axis < 2; axis++)
     {
         trgtspeed  = (trig[axis] * (float)max_speed);                           // Target speed

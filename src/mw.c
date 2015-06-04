@@ -1228,6 +1228,31 @@ void FiveElementSpikeFilterINT32(int32_t newval, int32_t *array)
     }
 }
 
+// http://lab.polygonal.de/?p=205 and http://forum.devmaster.net/t/fast-and-accurate-sine-cosine/9648
+// "High precision sine/cosine (~8x faster)"
+// Personal measurement of maximal absolute error: 0.0010907Rad = 0,062 Degree
+// Personal measured speedgain on stm32 F3: 53% (so not 8 times..)
+float sinFAST(float x)
+{
+#ifdef FASTSINCOS
+    while (x >  3.14159265f) x -= 6.28318531f;                                  // always wrap input angle to -PI..PI
+    while (x < -3.14159265f) x += 6.28318531f;
+    float sin = x * (1.27323954f - 0.405284735f * fabsf(x));                    // 1.27323954f= 4/pi, 0.405284735f = 4/(pi*pi)
+    return 0.225f * (sin * fabsf(sin) - sin) + sin;
+#else
+    return sinf(x);
+#endif
+}
+
+float cosFAST(float x)
+{
+#ifdef FASTSINCOS
+    return sinFAST(x + 1.57079632f);
+#else
+    return cosf(x);
+#endif
+}
+
 /*
 ****************************************************************************
 ***                    RC FUNCTIONS                                      ***
@@ -1553,8 +1578,8 @@ static void DoRcHeadfree(void)
     float   cosDiff, sinDiff, radDiff;
     if (!f.HEADFREE_MODE) return;
     radDiff = wrap_180(heading - headFreeModeHold) * RADX;                  // Degree to RAD
-    cosDiff = cosf(radDiff);
-    sinDiff = sinf(radDiff);
+    cosDiff = cosFAST(radDiff);
+    sinDiff = sinFAST(radDiff);
     rcCommand_PITCH  = (float)rcCommand[PITCH] * cosDiff + (float)rcCommand[ROLL]  * sinDiff;
     rcCommand[ROLL]  = (float)rcCommand[ROLL]  * cosDiff - (float)rcCommand[PITCH] * sinDiff;
     rcCommand[PITCH] = rcCommand_PITCH;
