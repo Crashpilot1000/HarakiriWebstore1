@@ -1230,21 +1230,20 @@ void FiveElementSpikeFilterINT32(int32_t newval, int32_t *array)
 
 // Chebyshev http://stackoverflow.com/questions/345085/how-do-trigonometric-functions-work/345117#345117
 // Thanks to ledvinap for the link and feedback!
-// Personal measurement of maximal absolute error: 0,00000077 = 0,000044Degree
-// Personal measured speedgain on stm32 F3: 26%
+// Personal measurement of maximal absolute error: 0,00000072 = 0,000041Degree
+// Personal measured speedgain on stm32 F3: 29%
 float sinWRAP(float x)
 {
     int32_t xint = x;
-    if (xint < -32 || xint > 32) return 0.0f;                                   // Stop here on error input (5 * 360 Deg)
-    while (x >  3.14159265f) x -= 6.28318531f;                                  // always wrap input angle to -PI..PI
+    if (xint < -32 || xint > 32) return 0.0f;                 // Stop here on error input (5 * 360 Deg)
+    while (x >  3.14159265f) x -= 6.28318531f;                // always wrap input angle to -PI..PI
     while (x < -3.14159265f) x += 6.28318531f;
-    if      (x >  1.570796327f) x =  1.570796327f - (x - 1.570796327f);         // We just pick -90..+90 Degree for least error see wiki picture..
+    if      (x >  1.570796327f) x =  1.570796327f - (x - 1.570796327f); // We just pick -90..+90 Degree for least error see wiki picture..
     else if (x < -1.570796327f) x = -1.570796327f - (1.570796327f + x);
-    float xh2  = x * x;                                                         // x quadrat
-    float xh3  = xh2 * x;                                                       // x hoch 3
-    float xh5  = xh2 * xh3;                                                     // x hoch 5
-    float xh7  = xh2 * xh5;                                                     // x hoch 7
-    return 0.99999660f * x - 0.16664824f * xh3 + 0.00830629f * xh5 - 0.00018363f * xh7;
+    float xh2  = x * x;                                       // x quadrat
+    float xh4  = xh2 * xh2;                                   // x hoch 4
+    float xh6  = xh2 * xh4;                                   // x hoch 6
+    return x * (0.99999660f - 0.16664824f * xh2 + 0.00830629f * xh4 - 0.00018363f * xh6);
 }
 
 float cosWRAP(float x)
