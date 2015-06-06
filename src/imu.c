@@ -16,12 +16,12 @@ static void RotGravAndMag(float *Grav, float *Mag, float *delta)              //
 {
     float tmp[3], mat[3][3], cosx, sinx, cosy, siny, cosz, sinz, coszcosx, sinzcosx, coszsinx, sinzsinx;
     uint8_t i;
-    cosx      =  cosf(-delta[PITCH]);
-    sinx      =  sinf(-delta[PITCH]);
-    cosy      =  cosf(delta[ROLL]);
-    siny      =  sinf(delta[ROLL]);
-    cosz      =  cosf(delta[YAW]);
-    sinz      =  sinf(delta[YAW]);
+    cosx      =  cosWRAP(-delta[PITCH]);
+    sinx      =  sinWRAP(-delta[PITCH]);
+    cosy      =  cosWRAP(delta[ROLL]);
+    siny      =  sinWRAP(delta[ROLL]);
+    cosz      =  cosWRAP(delta[YAW]);
+    sinz      =  sinWRAP(delta[YAW]);
     coszcosx  =  cosz * cosx;
     sinzcosx  =  sinz * cosx;
     coszsinx  =  sinx * cosz;
@@ -72,7 +72,7 @@ void computeIMU(void)
         init = true;
         AccScaleCMSS = OneGcmss / (float)cfg.sens_1G;                         // scale to cm/ss
         SQ1G         = (int32_t)cfg.sens_1G * (int32_t)cfg.sens_1G;
-        Tilt_25deg   = cosf(25.0f * RADX);
+        Tilt_25deg   = cosWRAP(25.0f * RADX);
         INV_GY_CMPF  = 1.0f / (float)(cfg.gy_gcmpf + 1);                      // Default 400
         INV_GY_CMPFM = 1.0f / (float)(cfg.gy_mcmpf + 1);                      // Default 200
         if(!cfg.acc_lpfhz) cfg.acc_lpfhz = 0.001f;                            // Avoid DivByZero
@@ -107,10 +107,10 @@ void computeIMU(void)
     Norm         = 1.0f / Norm;
     rollRAD      =  atan2f(EstG[0] * Norm, EstG[2] * Norm);                   // Norm seems to be obsolete, but testing shows different result :)
     pitchRAD     = -asinf(constrain_flt(EstG[1] * Norm, -1.0f, 1.0f));        // Ensure range, eliminate rounding stuff that might occure.
-    cr           = cosf(rollRAD);
-    sr           = sinf(rollRAD);
-    cp           = cosf(pitchRAD);
-    sp           = sinf(pitchRAD);
+    cr           = cosWRAP(rollRAD);
+    sr           = sinWRAP(rollRAD);
+    cp           = cosWRAP(pitchRAD);
+    sp           = sinWRAP(pitchRAD);
     TiltValue    = cr * cp;                                                   // We do this correctly here
     angle[ROLL]  = SpecialIntegerRoundUp( rollRAD  * RADtoDEG10);
     angle[PITCH] = SpecialIntegerRoundUp(-pitchRAD * RADtoDEG10);
@@ -133,8 +133,8 @@ void computeIMU(void)
         if (sensors(SENSOR_GPS) && !UpsideDown)
         {
             tmp[0]    = heading * RADX;                                       // Do GPS INS rotate ACC X/Y to earthframe no centrifugal comp. yet
-            cos_yaw_x = cosf(tmp[0]);                                         // Store for general use
-            sin_yaw_y = sinf(tmp[0]);
+            cos_yaw_x = cosWRAP(tmp[0]);                                      // Store for general use
+            sin_yaw_y = sinWRAP(tmp[0]);
             spcy      = sp * cos_yaw_x;
             spsy      = sp * sin_yaw_y;
             accycp    = cp * accADC[1];

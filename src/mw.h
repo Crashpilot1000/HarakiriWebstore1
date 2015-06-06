@@ -768,8 +768,8 @@ float    constrain_flt(float amt, float low, float high);
 int32_t  constrain_int(int32_t amt, int32_t low, int32_t high);
 int32_t  abs_int(int32_t x);
 void     FiveElementSpikeFilterINT32(int32_t newval, int32_t *array);
-float    sinFAST(float x);
-float    cosFAST(float x);
+float    sinWRAP(float x);
+float    cosWRAP(float x);
 
 // IMU
 void     computeIMU(void);

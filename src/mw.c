@@ -1228,29 +1228,36 @@ void FiveElementSpikeFilterINT32(int32_t newval, int32_t *array)
     }
 }
 
-// http://lab.polygonal.de/?p=205 and http://forum.devmaster.net/t/fast-and-accurate-sine-cosine/9648
-// "High precision sine/cosine (~8x faster)"
-// Personal measurement of maximal absolute error: 0.0010907Rad = 0,062 Degree
-// Personal measured speedgain on stm32 F3: 53% (so not 8 times..)
-float sinFAST(float x)
+// http://en.wikipedia.org/wiki/File:Taylorsine.svg
+// Personal measurement of maximal absolute error: 0,00000024 = 0,0000138Degree
+// Personal measured speedgain on stm32 F3: 13%
+// Replaces original because:
+// - Much shorter compilesize (if all sin/cos are replaced 4248 Bytes less)
+// - very accurate, slightly faster, does wrapping
+// Cheers Crashpilot1000
+#define Inv3Fak  0.166666667f
+#define Inv5Fak  0.00833333333f
+#define Inv7Fak  1.98412698e-4f
+#define Inv9Fak  2.75573192e-6f
+#define Inv11Fak 2.50521084e-8f
+float sinWRAP(float x)
 {
-#ifdef FASTSINCOS
-    while (x >  3.14159265f) x -= 6.28318531f;                                  // always wrap input angle to -PI..PI
+    while (x >  3.14159265f) x -= 6.28318531f;                // always wrap input angle to -PI..PI
     while (x < -3.14159265f) x += 6.28318531f;
-    float sin = x * (1.27323954f - 0.405284735f * fabsf(x));                    // 1.27323954f= 4/pi, 0.405284735f = 4/(pi*pi)
-    return 0.225f * (sin * fabsf(sin) - sin) + sin;
-#else
-    return sinf(x);
-#endif
+    if      (x >  1.570796327f) x =  1.570796327f - (x - 1.570796327f); // We just pick -90..+90 Degree for least error see wiki picture..
+    else if (x < -1.570796327f) x = -1.570796327f - (1.570796327f + x);
+    float xh2  = x * x;                                       // x quadrat
+    float xh3  = xh2 * x;                                     // x hoch 3
+    float xh5  = xh2 * xh3;                                   // x hoch 5
+    float xh7  = xh2 * xh5;                                   // x hoch 7
+    float xh9  = xh2 * xh7;                                   // x hoch 9
+    float xh11 = xh2 * xh9;
+    return x - xh3 * Inv3Fak + xh5 * Inv5Fak - xh7 * Inv7Fak + xh9 * Inv9Fak - xh11 * Inv11Fak;
 }
 
-float cosFAST(float x)
+float cosWRAP(float x)
 {
-#ifdef FASTSINCOS
-    return sinFAST(x + 1.57079632f);
-#else
-    return cosf(x);
-#endif
+    return sinWRAP(x + 1.57079632f);
 }
 
 /*
@@ -1577,9 +1584,9 @@ static void DoRcHeadfree(void)
     int16_t rcCommand_PITCH;
     float   cosDiff, sinDiff, radDiff;
     if (!f.HEADFREE_MODE) return;
-    radDiff = wrap_180(heading - headFreeModeHold) * RADX;                  // Degree to RAD
-    cosDiff = cosFAST(radDiff);
-    sinDiff = sinFAST(radDiff);
+    radDiff = wrap_180(heading - headFreeModeHold) * RADX;                  // Degree to RAD wrap_180 left here just in case we step off cosWRAP
+    cosDiff = cosWRAP(radDiff);
+    sinDiff = sinWRAP(radDiff);
     rcCommand_PITCH  = (float)rcCommand[PITCH] * cosDiff + (float)rcCommand[ROLL]  * sinDiff;
     rcCommand[ROLL]  = (float)rcCommand[ROLL]  * cosDiff - (float)rcCommand[PITCH] * sinDiff;
     rcCommand[PITCH] = rcCommand_PITCH;
