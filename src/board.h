@@ -21,8 +21,6 @@
 #define M_PI       3.14159265358979323846f
 #endif
 
-//#define FASTSINCOS                                          // Use faster & shorter & reasonably accurate Sin and Cos functions
-
 // Baro Predef
 #define BMP085REPEATDELAY  2950                             // BMP is also recognized by that number later in CLI
 #define MS5611REPEATDELAY  910

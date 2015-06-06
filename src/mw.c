@@ -1228,31 +1228,23 @@ void FiveElementSpikeFilterINT32(int32_t newval, int32_t *array)
     }
 }
 
-// http://en.wikipedia.org/wiki/File:Taylorsine.svg
-// Personal measurement of maximal absolute error: 0,00000024 = 0,0000138Degree
-// Personal measured speedgain on stm32 F3: 13%
-// Replaces original because:
-// - Much shorter compilesize (if all sin/cos are replaced 4248 Bytes less)
-// - very accurate, slightly faster, does wrapping
-// Cheers Crashpilot1000
-#define Inv3Fak  0.166666667f
-#define Inv5Fak  0.00833333333f
-#define Inv7Fak  1.98412698e-4f
-#define Inv9Fak  2.75573192e-6f
-#define Inv11Fak 2.50521084e-8f
+// Chebyshev http://stackoverflow.com/questions/345085/how-do-trigonometric-functions-work/345117#345117
+// Thanks to ledvinap for the link and feedback!
+// Personal measurement of maximal absolute error: 0,00000077 = 0,000044Degree
+// Personal measured speedgain on stm32 F3: 26%
 float sinWRAP(float x)
 {
-    while (x >  3.14159265f) x -= 6.28318531f;                // always wrap input angle to -PI..PI
+    int32_t xint = x;
+    if (xint < -32 || xint > 32) return 0.0f;                                   // Stop here on error input (5 * 360 Deg)
+    while (x >  3.14159265f) x -= 6.28318531f;                                  // always wrap input angle to -PI..PI
     while (x < -3.14159265f) x += 6.28318531f;
-    if      (x >  1.570796327f) x =  1.570796327f - (x - 1.570796327f); // We just pick -90..+90 Degree for least error see wiki picture..
+    if      (x >  1.570796327f) x =  1.570796327f - (x - 1.570796327f);         // We just pick -90..+90 Degree for least error see wiki picture..
     else if (x < -1.570796327f) x = -1.570796327f - (1.570796327f + x);
-    float xh2  = x * x;                                       // x quadrat
-    float xh3  = xh2 * x;                                     // x hoch 3
-    float xh5  = xh2 * xh3;                                   // x hoch 5
-    float xh7  = xh2 * xh5;                                   // x hoch 7
-    float xh9  = xh2 * xh7;                                   // x hoch 9
-    float xh11 = xh2 * xh9;
-    return x - xh3 * Inv3Fak + xh5 * Inv5Fak - xh7 * Inv7Fak + xh9 * Inv9Fak - xh11 * Inv11Fak;
+    float xh2  = x * x;                                                         // x quadrat
+    float xh3  = xh2 * x;                                                       // x hoch 3
+    float xh5  = xh2 * xh3;                                                     // x hoch 5
+    float xh7  = xh2 * xh5;                                                     // x hoch 7
+    return 0.99999660f * x - 0.16664824f * xh3 + 0.00830629f * xh5 - 0.00018363f * xh7;
 }
 
 float cosWRAP(float x)
