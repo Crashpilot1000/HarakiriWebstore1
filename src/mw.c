@@ -1228,10 +1228,11 @@ void FiveElementSpikeFilterINT32(int32_t newval, int32_t *array)
     }
 }
 
+// http://lolengine.net/blog/2011/12/21/better-function-approximations
 // Chebyshev http://stackoverflow.com/questions/345085/how-do-trigonometric-functions-work/345117#345117
 // Thanks to ledvinap for the link and feedback!
 // Personal measurement of maximal absolute error: 0,00000072 = 0,000041Degree
-// Personal measured speedgain on stm32 F3: 32%
+// Personal measured speedgain on stm32 F3: 35%
 float sinWRAP(float x)
 {
     int32_t xint = x;
@@ -1240,9 +1241,8 @@ float sinWRAP(float x)
     while (x < -M_PI_Single) x += M_PI_Times_Two;
     if      (x >  M_PI_Half) x =  M_PI_Half - (x - M_PI_Half);                  // We just pick -90..+90 Degree
     else if (x < -M_PI_Half) x = -M_PI_Half - (M_PI_Half + x);
-    float xh2  = x * x;                                                         // x quadrat
-    float xh4  = xh2 * xh2;                                                     // x hoch 4
-    return x * (0.99999660f - 0.16664824f * xh2 + 0.00018363f * xh4 * (45.23383979f - xh2));
+    float x2 = x * x;
+    return x * (0.99999660f + x2 * (-0.16664824f + x2 * (0.00830629f + x2 * -0.00018363f)));
 }
 
 float cosWRAP(float x)
