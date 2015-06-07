@@ -17,9 +17,9 @@
 #include "drv_gpio.h"
 #include "drv_i2c_lcd.h"
 
-#ifndef M_PI
-#define M_PI       3.14159265358979323846f
-#endif
+#define M_PI_Single    3.141592654f
+#define M_PI_Half      1.570796327f
+#define M_PI_Times_Two 6.283185307f
 
 // Baro Predef
 #define BMP085REPEATDELAY  2950                             // BMP is also recognized by that number later in CLI

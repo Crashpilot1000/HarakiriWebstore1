@@ -318,7 +318,7 @@ void GPS_set_pids(void)                                                         
     navPID_PARAM.kD            = (float)cfg.D8[PIDNAVR] /  1000.0f;
     navPID_PARAM.Imax          = posholdPID_PARAM.Imax;
     
-    GPSRAWtoRAD                = 0.0000001f * (float)M_PI / 180.0f;
+    GPSRAWtoRAD                = 0.0000001f * M_PI_Single / 180.0f;
 //    OneCmTo[LAT]               = 1.0f / MagicEarthNumber;                     // Moves North one cm
     maxbank10                  = (int16_t)cfg.gps_maxangle * 10;                // Initialize some values here
     maxbank100                 = (int16_t)cfg.gps_maxangle * 100;
@@ -345,7 +345,7 @@ static float get_D(float error, float *dt, struct PID_ *pid, struct PID_PARAM_ *
     static bool ini = false;
     if(!ini)
     {
-        GPSDptCut  = 0.5f / ((float)M_PI * (float)cfg.gpscuthz);
+        GPSDptCut  = 0.5f / (M_PI_Single * (float)cfg.gpscuthz);
         ini = true;
     }
     pid->lastderivative += (*dt / ( GPSDptCut + *dt)) * (((error - pid->last_error) / *dt) - pid->lastderivative);
