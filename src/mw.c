@@ -1230,19 +1230,36 @@ void FiveElementSpikeFilterINT32(int32_t newval, int32_t *array)
 
 // http://lolengine.net/blog/2011/12/21/better-function-approximations
 // Chebyshev http://stackoverflow.com/questions/345085/how-do-trigonometric-functions-work/345117#345117
-// Thanks to ledvinap for the link and feedback!
-// Personal measurement of maximal absolute error: 0,00000072 = 0,000041Degree
-// Personal measured speedgain on stm32 F3: 35%
-float sinWRAP(float x)
+// Thx to ledvinap for the stackoverflow - link and feedback!
+float sinWRAP(float x)                                                          // Select Method in board.h
 {
     int32_t xint = x;
     if (xint < -32 || xint > 32) return 0.0f;                                   // Stop here on error input (5 * 360 Deg)
     while (x >  M_PI_Single) x -= M_PI_Times_Two;                               // always wrap input angle to -PI..PI
     while (x < -M_PI_Single) x += M_PI_Times_Two;
+#ifdef sinopt0
+    return sinf(x);
+#endif
+
+#if defined(sinopt1) || defined(sinopt2)  
     if      (x >  M_PI_Half) x =  M_PI_Half - (x - M_PI_Half);                  // We just pick -90..+90 Degree
     else if (x < -M_PI_Half) x = -M_PI_Half - (M_PI_Half + x);
     float x2 = x * x;
-    return x * (0.99999660f + x2 * (-0.16664824f + x2 * (0.00830629f + x2 * -0.00018363f)));
+#endif
+
+#ifdef sinopt1
+    #define Inv3Fak  -1.666666666e-1f
+    #define Inv5Fak   8.333333333e-3f
+    #define Inv7Fak  -1.984126984e-4f
+    #define Inv9Fak   2.755731922e-6f
+    #define Inv11Fak -2.505210839e-8f
+    #define Inv13Fak  1.605904384e-10f
+    return x * (1.0f + x2 * (Inv3Fak + x2 * (Inv5Fak + x2 * (Inv7Fak + x2 * (Inv9Fak + x2 * (Inv11Fak + x2 * Inv13Fak)))))); // Taylor
+#endif
+
+#ifdef sinopt2
+    return x * (0.99999660f + x2 * (-0.16664824f + x2 * (0.00830629f + x2 * -0.00018363f))); // Chebyshev / Remez 
+#endif
 }
 
 float cosWRAP(float x)
@@ -1574,7 +1591,7 @@ static void DoRcHeadfree(void)
     int16_t rcCommand_PITCH;
     float   cosDiff, sinDiff, radDiff;
     if (!f.HEADFREE_MODE) return;
-    radDiff = wrap_180(heading - headFreeModeHold) * RADX;                  // Degree to RAD wrap_180 left here just in case we step off cosWRAP
+    radDiff = (heading - headFreeModeHold) * RADX;                          // wrap_180 done in sin/cosWRAP
     cosDiff = cosWRAP(radDiff);
     sinDiff = sinWRAP(radDiff);
     rcCommand_PITCH  = (float)rcCommand[PITCH] * cosDiff + (float)rcCommand[ROLL]  * sinDiff;

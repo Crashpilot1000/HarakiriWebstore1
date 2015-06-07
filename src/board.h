@@ -21,6 +21,11 @@
 #define M_PI_Half      1.570796327f
 #define M_PI_Times_Two 6.283185307f
 
+// Define JUST ONE wanted sinf() method!
+//#define sinopt0                                           // Original sinf() function slow, accurate, >4Kb of EEPROM waste
+#define sinopt1                                             // Very accurate replacement: Max Abs Error: 0,00000688 Deg, Speedgain: 14%
+//#define sinopt2                                           // Accurate replacement:      Max Abs Error: 0,000041   Deg, Speedgain: 35%
+
 // Baro Predef
 #define BMP085REPEATDELAY  2950                             // BMP is also recognized by that number later in CLI
 #define MS5611REPEATDELAY  910
