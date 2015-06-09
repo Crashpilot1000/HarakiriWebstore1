@@ -903,7 +903,7 @@ void loop(void)
             tmp0flt = PTerm + ITerm;
             if (cfg.flt_rp)
             {
-                axisPIDflt[axis] = ((filterPIrp * tmp0flt + lastPITerm[axis]) / (1 + filterPIrp)) - DTerm;
+                axisPIDflt[axis] = ((filterPIrp * tmp0flt + lastPITerm[axis]) / (1.0f + filterPIrp)) - DTerm;
                 lastPITerm[axis] = tmp0flt;
             }
             else axisPIDflt[axis] = tmp0flt - DTerm;

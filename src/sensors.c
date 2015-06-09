@@ -114,8 +114,8 @@ retry:
     SonarLandWanted = cfg.snr_land;                               // Variable may be overwritten by failsave
 #endif
     MainDptCut = RCconstPI / (float)cfg.maincuthz;                // Initialize Cut off frequencies for mainpid D
-		filterPIrp = 10 - cfg.flt_rp;
-		filterPIyw = 10 - cfg.flt_yw;
+		filterPIrp = (float)(100 - cfg.flt_rp) * 0.1f;
+		filterPIyw = (float)(100 - cfg.flt_yw) * 0.1f;
 }
 
 uint16_t batteryAdcToVoltage(uint16_t src)
@@ -348,11 +348,11 @@ void Gyro_getADC(void)
 }
 
 #ifdef BARO
-
 // Current Timing:
 // MS5611: 51 Hz
 // BMP085: 32.9 Hz
-#define AbsAltExponent 1.0 / 5.255
+// For Reference the double version: FiveElementSpikeFilterINT32((1.0 - pow((double)ActualPressure / 101325.0, AbsAltExponent)) * 141856000.0, BaroSpikeTab32); // 4433000.0 * 32
+#define AbsAltExponent 0.1902949572f                              // double: 1.0 / 5.255
 void Baro_update(void)                                            // Note Pressure is now global for telemetry 1hPa = 1mBar
 {
     static int32_t  BaroSpikeTab32[5];                            // Note: We don't care about runup bufferstate since first 50 runs are discarded anyway
@@ -384,8 +384,9 @@ void Baro_update(void)                                            // Note Pressu
         state = 0;                                                // Reset statemachine
         ActualPressure = baro.calculate();                        // ActualPressure needed by mavlink
         lastval32 = BaroSpikeTab32[2];                            // Save lastval from spiketab
-        FiveElementSpikeFilterINT32((1.0 - pow((double)ActualPressure / 101325.0, AbsAltExponent)) * 141856000.0, BaroSpikeTab32); // 4433000.0 * 16
-        BaroAlt = (float)(BaroSpikeTab32[2] + lastval32) * 0.015625f;
+        FiveElementSpikeFilterINT32((1.0f - powf(ActualPressure / 101325.0f, AbsAltExponent)) * 141856e3f, BaroSpikeTab32); // 4433000.0f * 32.0f
+        BaroAlt = (float)(BaroSpikeTab32[2] + lastval32) * (1.0f / 32.0f / 2.0f);// (1.0f / 32.0f / 2.0f) compiled to constant: 0.015625f
+
         newbaroalt = true;
         if (!GroundAltInitialized)
         {

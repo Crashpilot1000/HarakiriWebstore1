@@ -432,8 +432,8 @@ typedef struct config_t
     uint16_t looptime;                      // imu loop time in us
     uint8_t  mainpidctrl;                   // 0 = OriginalMwiiPid pimped by me, 1 = New mwii controller (experimental, float pimped + pt1)
     uint8_t  maincuthz;                     // (1-50Hz) 0 Disables pt1element. Cuf Off Frequency for pt2 element D term in Hz of main Pid controller
-    uint8_t	 flt_rp;                        // [0..9] Filtering for Roll and Pitch P&I
-    uint8_t	 flt_yw;                        // [0..9] Filtering for Yaw P&I
+    uint8_t	 flt_rp;                        // [0..99] Filtering for Roll and Pitch P&I
+    uint8_t	 flt_yw;                        // [0..99] Filtering for Yaw P&I
     uint8_t  gpscuthz;                      // (1-50Hz) Cuf Off Frequency for D term in Hz of GPS Pid controller 
     uint8_t  P8[PIDITEMS];
     uint8_t  I8[PIDITEMS];

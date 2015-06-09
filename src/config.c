@@ -162,8 +162,8 @@ static void resetConf(void)
     cfg.looptime                  = 3000;
     cfg.mainpidctrl               = 0;          // 0 = OriginalMwiiPid pimped by me, 1 = New mwii controller (experimental, float pimped + pt1)
     cfg.maincuthz                 = 12;         // [1-100Hz] Cuf Off Frequency for D term of main Pid controller
-    cfg.flt_rp                    = 3;          // [0..9] Filtering for Roll and Pitch P&I
-    cfg.flt_yw                    = 0;          // [0..9] Filtering for Yaw P&I
+    cfg.flt_rp                    = 15;         // [0..99] Filtering for Roll and Pitch P&I
+    cfg.flt_yw                    = 0;          // [0..99] Filtering for Yaw P&I
     cfg.gpscuthz                  = 45;         // [1-100Hz] Cuf Off Frequency for D term of GPS Pid controller 
 
     cfg.gy_gcmpf                  = 700;        // (10-1000) 400 default. Now 1000. The higher, the more weight gets the gyro and the lower is the correction with Acc data.
