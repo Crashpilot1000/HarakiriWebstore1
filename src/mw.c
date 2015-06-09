@@ -1230,7 +1230,7 @@ void FiveElementSpikeFilterINT32(int32_t newval, int32_t *array)
 
 // http://lolengine.net/blog/2011/12/21/better-function-approximations
 // Chebyshev http://stackoverflow.com/questions/345085/how-do-trigonometric-functions-work/345117#345117
-// Thx to ledvinap for the stackoverflow - link and feedback!
+// Thanks for ledvinap for making such accuracy possible! See: https://github.com/cleanflight/cleanflight/issues/940#issuecomment-110323384
 float sinWRAP(float x)                                                          // Select Method in board.h
 {
     int32_t xint = x;
@@ -1241,24 +1241,16 @@ float sinWRAP(float x)                                                          
     return sinf(x);
 #endif
 
-#if defined(sinopt1) || defined(sinopt2)  
+#ifdef sinopt1
+    #define SINmagik1  1.0f
+    #define SINmagik2 -1.666665710e-1f                                          // Double: -1.666665709650470145824129400050267289858e-1
+    #define SINmagik3  8.333017292e-3f                                          // Double:  8.333017291562218127986291618761571373087e-3
+    #define SINmagik4 -1.980661520e-4f                                          // Double: -1.980661520135080504411629636078917643846e-4
+    #define SINmagik5  2.600054768e-6f                                          // Double:  2.600054767890361277123254766503271638682e-6
     if      (x >  M_PI_Half) x =  M_PI_Half - (x - M_PI_Half);                  // We just pick -90..+90 Degree
     else if (x < -M_PI_Half) x = -M_PI_Half - (M_PI_Half + x);
     float x2 = x * x;
-#endif
-
-#ifdef sinopt1
-    #define Inv3Fak  -1.666666666e-1f
-    #define Inv5Fak   8.333333333e-3f
-    #define Inv7Fak  -1.984126984e-4f
-    #define Inv9Fak   2.755731922e-6f
-    #define Inv11Fak -2.505210839e-8f
-    #define Inv13Fak  1.605904384e-10f
-    return x * (1.0f + x2 * (Inv3Fak + x2 * (Inv5Fak + x2 * (Inv7Fak + x2 * (Inv9Fak + x2 * (Inv11Fak + x2 * Inv13Fak)))))); // Taylor
-#endif
-
-#ifdef sinopt2
-    return x * (0.99999660f + x2 * (-0.16664824f + x2 * (0.00830629f + x2 * -0.00018363f))); // Chebyshev / Remez 
+    return x * (SINmagik1 + x2 * (SINmagik2 + x2 * (SINmagik3 + x2 * (SINmagik4 + x2 * SINmagik5))));
 #endif
 }
 

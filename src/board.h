@@ -23,8 +23,7 @@
 
 // Define JUST ONE wanted sinf() method!
 //#define sinopt0                                           // Original sinf() function slow, accurate, >4Kb of EEPROM waste
-#define sinopt1                                             // Very accurate replacement: Max Abs Error: 0,00000688 Deg, Speedgain: 14%
-//#define sinopt2                                           // Accurate replacement:      Max Abs Error: 0,000041   Deg, Speedgain: 35%
+#define sinopt1                                             // Very accurate replacement: Max Abs Error: 0,00000688 Deg, Speedgain: 28%
 
 // Baro Predef
 #define BMP085REPEATDELAY  2950                             // BMP is also recognized by that number later in CLI

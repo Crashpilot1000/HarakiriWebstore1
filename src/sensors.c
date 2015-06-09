@@ -355,11 +355,11 @@ void Gyro_getADC(void)
 #define AbsAltExponent 1.0 / 5.255
 void Baro_update(void)                                            // Note Pressure is now global for telemetry 1hPa = 1mBar
 {
-    static int32_t  BaroSpikeTab16[5];                            // Note: We don't care about runup bufferstate since first 50 runs are discarded anyway
+    static int32_t  BaroSpikeTab32[5];                            // Note: We don't care about runup bufferstate since first 50 runs are discarded anyway
     static uint32_t LastGeneraltime, LastDataOutPut = 0;
     static uint16_t baroDeadline = 0;
     static uint8_t  state = 0;
-    int32_t lastva16;
+    int32_t lastval32;
 
     if (micros() - LastGeneraltime < baroDeadline) return;        // Make it rollover friendly
     switch (state)                                                // Statemachine to schedule Baro I2C actions
@@ -383,9 +383,9 @@ void Baro_update(void)                                            // Note Pressu
     {
         state = 0;                                                // Reset statemachine
         ActualPressure = baro.calculate();                        // ActualPressure needed by mavlink
-        lastva16 = BaroSpikeTab16[2];                             // Save lastval from spiketab
-        FiveElementSpikeFilterINT32((1.0 - pow((double)ActualPressure / 101325.0, AbsAltExponent)) * 70928000.0, BaroSpikeTab16); // 4433000.0 * 16
-        BaroAlt = (float)(BaroSpikeTab16[2] + lastva16) * 0.03125f; // BaroAlt = (BaroSpikeTab16[2] + lastva16) >> 5;
+        lastval32 = BaroSpikeTab32[2];                            // Save lastval from spiketab
+        FiveElementSpikeFilterINT32((1.0 - pow((double)ActualPressure / 101325.0, AbsAltExponent)) * 141856000.0, BaroSpikeTab32); // 4433000.0 * 16
+        BaroAlt = (float)(BaroSpikeTab32[2] + lastval32) * 0.015625f;
         newbaroalt = true;
         if (!GroundAltInitialized)
         {

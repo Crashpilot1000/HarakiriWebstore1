@@ -160,19 +160,21 @@ void computeIMU(void)
 ///////////////////////////////////////////////
 //Crashpilot1000 Mod getEstimatedAltitude ACC//
 ///////////////////////////////////////////////
-#define VarioTabsize 8
+#define VarioTabsize 7
 void getEstimatedAltitude(void)
 {
     static int8_t   VarioTab[VarioTabsize];
     static uint8_t  Vidx = 0, IniStep = 0, IniCnt = 0;
-    static float    AvgHz = 0.0f, LastEstAltBaro = 0.0f, SNRcorrect, SNRavg = 0.0f;
+    static float    AvgHzVarioCorrector = 0.0f, LastEstAltBaro = 0.0f, SNRcorrect, SNRavg = 0.0f;
     float           NewVal, EstAltBaro;
     uint8_t         i;
+    int32_t         NewVarioVal, VarioSum;
 
-    if (!GroundAltInitialized)
+    if (!GroundAltInitialized)                                                // The first runs go here
     {
         if (newbaroalt)
         {
+            newbaroalt = false;                                               // Reset Newbarovalue since it's iterative and not interrupt driven it's OK
             switch(IniStep)                                                   // Casemachine here for further extension
             {
             case 0:
@@ -186,68 +188,70 @@ void getEstimatedAltitude(void)
                 }
                 break;
             case 1:
-                GroundAlt += BaroAlt;
-                AvgHz     += 1000000.0f / BaroDtUS;                           // Note: BaroDtUS can't be zero since it is initialized in the settle loop.
+                GroundAlt           += BaroAlt;
+                AvgHzVarioCorrector += 1000000.0f / BaroDtUS;                 // Note: BaroDtUS can't be zero since it is initialized in the settle loop.
                 IniCnt++;
                 if (IniCnt == 50)                                             // Gather 50 values
                 {
-                    GroundAlt *= 0.02f;
-                    AvgHz     *= 0.02f;
-                    GroundAltInitialized = true;
+                    GroundAlt  *= 0.02f;
                     SonarStatus = 0;
+                    AvgHzVarioCorrector *= 0.02f / (float)(VarioTabsize + 1);
+                    GroundAltInitialized = true;
                 }
                 break;
             }
         }
+        return;
     }
-    else
+
+    if (sensors(SENSOR_SONAR))
     {
-        if (sensors(SENSOR_SONAR))
+        if (SonarStatus) NewVal = sonarAlt;
+        switch(SonarStatus)
         {
-            if (SonarStatus) NewVal = sonarAlt;
-            switch(SonarStatus)
+        case 0:
+            SNRavg  = 0.0f;
+            IniStep = 0;
+            break;
+        case 1:
+            if (!IniStep)
             {
-            case 0:
-                SNRavg  = 0.0f;
-                IniStep = 0;
-                break;
-            case 1:
-                if (!IniStep)
-                {
-                    IniStep = 1;
-                    SNRavg  = NewVal;
-                }
-                else SNRavg += 0.2f * (NewVal - SNRavg);                      // Adjust Average during accepttimer (ca. 550ms so ca. 20 cycles)
-                SNRcorrect = EstAlt + GroundAlt - SNRavg;                     // Calculate baro/sonar displacement on 1st contact
-                break;
-            case 2:
-                if (newbaroalt) BaroAlt = (SNRcorrect + NewVal) * cfg.snr_cf + BaroAlt * (1 - cfg.snr_cf); // Set weight / make transition smoother
-                break;
+                IniStep = 1;
+                SNRavg  = NewVal;
             }
-        }
-        EstAlt += vario * ACCDeltaTimeINS;
-        if (newbaroalt)
-        {
-            EstAltBaro     = BaroAlt - GroundAlt;
-            VarioTab[Vidx] = constrain_int((int16_t)(EstAltBaro - LastEstAltBaro), -127, 127);
-            Vidx++;
-            if (Vidx == VarioTabsize) Vidx = 0;
-            LastEstAltBaro = EstAltBaro;
-            NewVal = 0;
-            for (i = 0; i < VarioTabsize; i++) NewVal += (float)VarioTab[i];
-            NewVal = (NewVal * AvgHz)/(float)VarioTabsize;
-            vario  = vario  * cfg.accz_vcf + NewVal     * (1.0f - cfg.accz_vcf);
-            EstAlt = EstAlt * cfg.accz_acf + EstAltBaro * (1.0f - cfg.accz_acf);
-            if (cfg.bar_dbg)
-            {
-                debug[0] = EstAltBaro * 10;
-                debug[1] = EstAlt     * 10;
-                debug[2] = NewVal;
-                debug[3] = vario;
-            }
+            else SNRavg += 0.2f * (NewVal - SNRavg);                          // Adjust Average during accepttimer (ca. 550ms so ca. 20 cycles)
+            SNRcorrect = EstAlt + GroundAlt - SNRavg;                         // Calculate baro/sonar displacement on 1st contact
+            break;
+        case 2:
+            if (newbaroalt) BaroAlt = (SNRcorrect + NewVal) * cfg.snr_cf + BaroAlt * (1 - cfg.snr_cf); // Set weight / make transition smoother
+            break;
         }
     }
-    newbaroalt = false;                                                       // Reset Newbarovalue since it's iterative and not interrupt driven it's OK
+
+    EstAlt += vario * ACCDeltaTimeINS;
+    if (newbaroalt)
+    {
+        newbaroalt     = false;                                               // Reset Newbarovalue since it's iterative and not interrupt driven it's OK
+        EstAltBaro     = BaroAlt - GroundAlt;
+        NewVarioVal    = constrain_int(EstAltBaro - LastEstAltBaro, -127, 127);
+        LastEstAltBaro = EstAltBaro;
+        VarioSum       = NewVarioVal;
+        for (i = 0; i < VarioTabsize; i++) VarioSum += VarioTab[i];
+        VarioTab[Vidx] = NewVarioVal;                                         // is constrained to symetric int8_t range
+        Vidx++;
+        if (Vidx == VarioTabsize) Vidx = 0;
+
+        NewVal = (float)VarioSum * AvgHzVarioCorrector;
+        vario  = vario  * cfg.accz_vcf + NewVal     * (1.0f - cfg.accz_vcf);
+        EstAlt = EstAlt * cfg.accz_acf + EstAltBaro * (1.0f - cfg.accz_acf);
+        if (cfg.bar_dbg)
+        {
+            debug[0] = EstAltBaro * 10;
+            debug[1] = EstAlt     * 10;
+            debug[2] = NewVal;
+            debug[3] = vario;
+        }
+    }
 }
 
 void getAltitudePID(void)                                                     // I put this out of getEstimatedAltitude seems logical
