@@ -151,40 +151,6 @@ enum                                        // NEVER CHANGE THAT ORDER - WILL BR
     AUX6
 };
 
-enum
-{
-    PIDROLL,
-    PIDPITCH,
-    PIDYAW,
-    PIDALT,
-    PIDPOS,
-    PIDPOSR,
-    PIDNAVR,
-    PIDLEVEL,
-    PIDMAG,
-    PIDVEL,
-    PIDITEMS
-};
-
-enum                                        // This is limited to 32 Boxes!!
-{
-    BOXANGLE = 0,
-    BOXHORIZON,
-    BOXBARO,
-    BOXMAG,
-    BOXCAMSTAB,
-    BOXARM,
-    BOXGPSHOME,
-    BOXGPSHOLD,
-    BOXGPSAUTO,
-    BOXHEADFREE,
-    BOXBEEPERON,
-    BOXHEADADJ,
-    BOXOSD,
-    BOXGTUNE,
-    CHECKBOXITEMS
-};
-
 // MiscCLItxt are just for CLI Prinout
 // This way we force most CLI text to stay in EEPROM and reduce compiler adding padbytes for alignment each time.
 enum                                        // Keep the liststart in line with typedef enum AccelSensors in board.h
@@ -261,7 +227,6 @@ enum                                        // Keep the liststart in line with t
     PRTCLIPROMPT,
     PRTCLIITEMS
 };
-
 static const char MiscCLItext[] =           // Keep the liststart in line with typedef enum AccelSensors in board.h
     "ADXL345;"                              // Keep that here
     "MPU6050;"                              // Keep that here
@@ -347,6 +312,24 @@ static const char MiscCLItext[] =           // Keep the liststart in line with t
     "Config:\r\nFW: ;"
     "\r\n# ;";
 
+enum                                        // This is limited to 32 Boxes!!
+{
+    BOXANGLE = 0,
+    BOXHORIZON,
+    BOXBARO,
+    BOXMAG,
+    BOXCAMSTAB,
+    BOXARM,
+    BOXGPSHOME,
+    BOXGPSHOLD,
+    BOXGPSAUTO,
+    BOXHEADFREE,
+    BOXBEEPERON,
+    BOXHEADADJ,
+    BOXOSD,
+    BOXGTUNE,
+    CHECKBOXITEMS
+};
 static const char boxnames[] =
     "ANGLE;"
     "HORIZON;"
@@ -363,6 +346,20 @@ static const char boxnames[] =
     "OSD SW;"
     "GTUNE;";
 
+enum
+{
+    PIDROLL,
+    PIDPITCH,
+    PIDYAW,
+    PIDALT,
+    PIDPOS,
+    PIDPOSR,
+    PIDNAVR,
+    PIDLEVEL,
+    PIDMAG,
+    PIDVEL,
+    PIDITEMS
+};
 static const char pidnames[] =
     "ROLL;"
     "PITCH;"

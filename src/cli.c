@@ -124,7 +124,7 @@ typedef struct
 const clicmd_t cmdTable[] =
 {
     { cliSet,     "set",     "set xy = xy or *"   },
-    { cliFeature, "feature", "-xy or xy or --"    },
+    { cliFeature, "feature", "xy or -xy or --"    },
     { cliAuxset,  "auxset",  "Set Auxch"          },
     { cliMap,     "map",     "RC Chan Mapping"    },
     { cliMixer,   "mixer",   "Mix Name or List"   },
@@ -451,10 +451,10 @@ static char *ftoa(float x, char *floatString)
     return floatString;
 }
 
-static void printMiscCLITXT(int32_t blubbernumber)                            // see MiscCLItxt in mw.h
+static void printMiscCLITXT(uint32_t blubbernumber)                           // see MiscCLItxt in mw.h
 {
-    int32_t i = 0, srcptr = 0;
-    blubbernumber = constrain_int(blubbernumber, 0, PRTCLIITEMS - 1);         // Ensure range just for safety here
+    uint32_t i = 0, srcptr = 0;
+    if (blubbernumber > (PRTCLIITEMS - 1)) return;                            // Not possible. Out of range
     while (i != blubbernumber) if (MiscCLItext[srcptr++] == ';') i++;         // Search for blubberentry
     while (MiscCLItext[srcptr] != ';') printf("%c", MiscCLItext[srcptr++]);   // uartWrite(MiscCLInames[srcptr++]); is too fast for buffers to keep up and incompatible to serial LCD
 }
