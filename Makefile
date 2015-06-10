@@ -111,10 +111,14 @@ INCLUDE_DIRS	 = $(SRC_DIR) \
 		   $(CMSIS_DIR)/CM3/DeviceSupport/ST/STM32F10x \
 
 ARCH_FLAGS	 = -mthumb -mcpu=cortex-m3
+
+OPTIMIZE	 = -Os
+LTO_FLAGS	 = -flto $(OPTIMIZE)
+
 CFLAGS		 = $(ARCH_FLAGS) \
+		   $(LTO_FLAGS) \
 		   $(addprefix -D,$(OPTIONS)) \
 		   $(addprefix -I,$(INCLUDE_DIRS)) \
-           -Os \
            -Wall \
            -Wdouble-promotion \
            -ffunction-sections \
@@ -131,6 +135,7 @@ ASFLAGS		 = $(ARCH_FLAGS) \
 LD_SCRIPT	 = $(ROOT)/stm32_flash.ld
 LDFLAGS		 = -lm \
 		   $(ARCH_FLAGS) \
+		   $(LTO_FLAGS) \
 		   -static \
 		   -Wl,-gc-sections,-Map,$(TARGET_MAP) \
 		   -T$(LD_SCRIPT)

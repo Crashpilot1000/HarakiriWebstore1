@@ -3,8 +3,8 @@
 **
 **  File        : stm32_flash.ld
 **
-**  Abstract    : Linker script for STM32F103C8 Device with
-**                64KByte FLASH, 20KByte RAM
+**  Abstract    : Linker script for STM32F103CB Device with
+**                128KByte FLASH, 20KByte RAM
 **
 *****************************************************************************
 */
@@ -19,10 +19,10 @@ _estack = 0x20005000;    /* end of 20K RAM */
 _Min_Heap_Size = 0;      /* required amount of heap  */
 _Min_Stack_Size = 0x400; /* required amount of stack */
 
-/* Specify the memory areas */
+/* Specify the memory areas. Flash is limited for last 3K for configuration storage */
 MEMORY
 {
-  FLASH (rx)      : ORIGIN = 0x08000000, LENGTH = 128K  /* I left it at 128. But watch your codesize - 3K Last FLASH sector used for config storage!*/
+  FLASH (rx)      : ORIGIN = 0x08000000, LENGTH = 125K
   RAM (xrw)       : ORIGIN = 0x20000000, LENGTH = 20K
   MEMORY_B1 (rx)  : ORIGIN = 0x60000000, LENGTH = 0K
 }
@@ -90,7 +90,7 @@ SECTIONS
   _sidata = .;
 
   /* Initialized data sections goes into RAM, load LMA copy after code */
-  .data :
+  .data : 
   {
     . = ALIGN(4);
     _sdata = .;        /* create a global symbol at data start */
