@@ -4,17 +4,15 @@
     DMA UART routines idea lifted from AutoQuad
     Copyright © 2011  Bill Nesbitt
 */
-#define UART_BUFFER_SIZE    264
+#define UART_BUFFER_SIZE    256
 
 // Receive buffer, circular DMA
-volatile uint8_t rxBuffer[UART_BUFFER_SIZE];
-uint32_t rxDMAPos = 0;
-volatile uint8_t txBuffer[UART_BUFFER_SIZE];
-uint32_t txBufferTail = 0;
-uint32_t txBufferHead = 0;
+static volatile uint8_t  rxBuffer[UART_BUFFER_SIZE], txBuffer[UART_BUFFER_SIZE], transmituart1rdy = 0;
+static volatile uint32_t rxDMAPos = 0, txBufferTail = 0, txBufferHead = 0;
 
 static void uartTxDMA(void)
 {
+    transmituart1rdy = 0;
     DMA1_Channel4->CMAR = (uint32_t)&txBuffer[txBufferTail];
     if (txBufferHead > txBufferTail)
     {
@@ -34,6 +32,7 @@ void DMA1_Channel4_IRQHandler(void)
     DMA_ClearITPendingBit(DMA1_IT_TC4);
     DMA_Cmd(DMA1_Channel4, DISABLE);
     if (txBufferHead != txBufferTail) uartTxDMA();
+    else transmituart1rdy = 1;
 }
 
 void uartInit(uint32_t speed)
@@ -97,17 +96,17 @@ bool uartAvailable(void)
     return (DMA_GetCurrDataCounter(DMA1_Channel5) != rxDMAPos) ? true : false;
 }
 
-bool uartTransmitEmpty(void)
+uint8_t uart1TransmitEmpty(void)
 {
-    return (txBufferTail == txBufferHead);
+    if (transmituart1rdy && txBufferTail == txBufferHead) return 1;
+    else return 0;
 }
 
 uint8_t uartRead(void)
 {
     uint8_t ch;
     ch = rxBuffer[UART_BUFFER_SIZE - rxDMAPos];
-    // go back around the buffer
-    if (--rxDMAPos == 0) rxDMAPos = UART_BUFFER_SIZE;
+    if (--rxDMAPos == 0) rxDMAPos = UART_BUFFER_SIZE;                             // go back around the buffer
     return ch;
 }
 
@@ -121,8 +120,7 @@ void uartWrite(uint8_t ch)
 {
     txBuffer[txBufferHead] = ch;
     txBufferHead = (txBufferHead + 1) % UART_BUFFER_SIZE;
-
-    if (!(DMA1_Channel4->CCR & 1)) uartTxDMA();                                   // if DMA wasn't enabled, fire it up
+    if (!(DMA1_Channel4->CCR & 1)) uartTxDMA();                                   // if DMA wasn't enabled, fire it up  
 }
 
 void uartPrint(char *str)
@@ -134,10 +132,9 @@ void uartPrint(char *str)
 uartReceiveCallbackPtr uart2Callback = NULL;
 #define UART2_BUFFER_SIZE    128
 
-volatile uint8_t tx2Buffer[UART2_BUFFER_SIZE];
-uint32_t tx2BufferTail = 0;
-uint32_t tx2BufferHead = 0;
-bool uart2RxOnly = false;
+static volatile uint8_t  tx2Buffer[UART2_BUFFER_SIZE], transmituart2rdy = 0;
+static volatile uint32_t tx2BufferTail = 0, tx2BufferHead = 0;
+static bool uart2RxOnly = false;
 
 static void uart2Open(uint32_t speed)
 {
@@ -190,9 +187,10 @@ void uart2Write(uint8_t ch)
     USART_ITConfig(USART2, USART_IT_TXE, ENABLE);
 }
 
-bool uart2TransmitEmpty(void)
+uint8_t uart2TransmitEmpty(void)
 {
-    return tx2BufferTail == tx2BufferHead;
+    if (transmituart2rdy && tx2BufferTail == tx2BufferHead) return 1;
+    else return 0;
 }
 
 void USART2_IRQHandler(void)
@@ -207,12 +205,14 @@ void USART2_IRQHandler(void)
     {
         if (tx2BufferTail != tx2BufferHead)
         {
-            USART2->DR    = tx2Buffer[tx2BufferTail];
-            tx2BufferTail = (tx2BufferTail + 1) % UART2_BUFFER_SIZE;
+            transmituart2rdy = 0;
+            USART2->DR       = tx2Buffer[tx2BufferTail];
+            tx2BufferTail    = (tx2BufferTail + 1) % UART2_BUFFER_SIZE;
         }
         else
         {
             USART_ITConfig(USART2, USART_IT_TXE, DISABLE);
+            transmituart2rdy = 1;
         }
     }
 }

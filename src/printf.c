@@ -257,7 +257,7 @@ void tfp_printf(char *fmt, ...)
     va_start(va, fmt);
     tfp_format(stdout_putp, stdout_putf, fmt, va);
     va_end(va);
-    if (!i2cLCD) while (!uartTransmitEmpty()); // Johannes
+    if (!i2cLCD) while (!uart1TransmitEmpty()); // Johannes
 }
 
 static void putcp(void *p, char c)

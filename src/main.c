@@ -9,6 +9,7 @@ bool   SerialRCRX = false;
 static void _putc(void *p, char c)
 {
     (void)p;
+    while (!uart1TransmitEmpty());
     uartWrite(c);
 }
 
