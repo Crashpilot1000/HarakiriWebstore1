@@ -248,7 +248,7 @@ const clivalue_t valueTable[] =
     { VAR_UINT8,  1,       1,          6, &cfg.mag_time,               "mag_time"               },
     { VAR_UINT8,  1,       0,          1, &cfg.mag_gain,               "mag_gain"               },
     { VAR_UINT32, 0,    1200,     115200, &cfg.gps_baudrate,           "gps_baudrate"           },
-    { VAR_UINT8,  0,       0,          9, &cfg.gps_type,               "gps_type"               },
+    { VAR_UINT8,  0,       0,          4, &cfg.gps_type,               "gps_type"               },
     { VAR_FLOAT,  1,       0,          1, &cfg.gps_ins_vel,            "gps_ins_vel"            },
     { VAR_UINT16, 1,       0,      10000, &cfg.gps_lag,                "gps_lag"                },
     { VAR_UINT8,  1,       5,         10, &cfg.gps_ph_minsat,          "gps_ph_minsat"          },

@@ -46,6 +46,7 @@ static const uint8_t ubloxInit[] =
     0xB5, 0x62, 0x06, 0x01, 0x03, 0x00, 0xF0, 0x00, 0x00, 0xFA, 0x0F,               // GGA: Global positioning system fix data
     0xB5, 0x62, 0x06, 0x01, 0x03, 0x00, 0xF0, 0x02, 0x00, 0xFC, 0x13,               // GSA: GNSS DOP and Active Satellites
     0xB5, 0x62, 0x06, 0x01, 0x03, 0x00, 0xF0, 0x04, 0x00, 0xFE, 0x17,               // RMC: Recommended Minimum data
+
     0xB5, 0x62, 0x06, 0x01, 0x03, 0x00, 0x01, 0x02, 0x01, 0x0E, 0x47,               // set POSLLH MSG rate
     0xB5, 0x62, 0x06, 0x01, 0x03, 0x00, 0x01, 0x03, 0x01, 0x0F, 0x49,               // set STATUS MSG rate
     0xB5, 0x62, 0x06, 0x01, 0x03, 0x00, 0x01, 0x06, 0x01, 0x12, 0x4F,               // set SOL MSG rate
@@ -155,10 +156,10 @@ enum
 static volatile uint8_t GPS_Present = 0;
 
 static void gpsPrint(const char *str);
-static bool GPS_MTK_newFrame(uint8_t data);
-static bool GPS_NMEA_newFrame(char c);
-static bool GPS_UBLOX_newFrame(uint8_t data);
-static bool GPS_newFrame(char c);
+static uint8_t GPS_MTK_newFrame(uint8_t data);
+static uint8_t GPS_NMEA_newFrame(char c);
+static uint8_t GPS_UBLOX_newFrame(uint8_t data);
+static uint8_t GPS_newFrame(char c);
 
 void DoChkGPSDeadin50HzLoop(void)                                                   // Check this in a 50Hz loop in mainprogram
 {
@@ -212,7 +213,7 @@ static void GPS_NewData(uint16_t c)                                             
     }
 }
 
-static bool GPS_newFrame(char c)                                                    // Crashpilot
+static uint8_t GPS_newFrame(char c)                                                 // Crashpilot
 {
     switch (cfg.gps_type) 	                                                        // GPS_NMEA = 0, GPS_UBLOX = 1, GPS_MTK16 = 2, GPS_MTK19 = 3, GPS_UBLOX_DUMB = 4
     {
@@ -233,8 +234,7 @@ static bool GPS_newFrame(char c)                                                
 ////////////////////////////////////////////////////////////////////////////////////
 void gpsInit(uint32_t baudrate)                                                     // Called in Main
 {
-    uint32_t i;
-    uint32_t timeout;
+    uint32_t i, timeout;
 
     GPS_Present = 0;
     delay(2000);                                                                    // let it init
@@ -334,13 +334,12 @@ static void gpsPrint(const char *str)
     delay(30);
 }
 
-static bool GPS_MTK_newFrame(uint8_t data)                                          // Crashpilot: This code is stupid but works
+static uint8_t GPS_MTK_newFrame(uint8_t data)                                       // Crashpilot: This code is stupid but works
 {
     static  uint8_t  pstep, lastbyte, LSLshifter,chkA, count, satn, fixtype;
     static  uint32_t lat, lon, alt, grspeed, grcourse;                              // MTK Dataset use unsigned for shiftoperation here
     int32_t tmp32     = 0;
-    uint8_t startbyte = 0xD1;                                                       // Set default for 1.9 FW
-    bool    parsed    = false;
+    uint8_t startbyte = 0xD1, parsed = 0;                                           // Set default for 1.9 FW
 
     if(!pstep)
     {
@@ -480,7 +479,7 @@ static bool GPS_MTK_newFrame(uint8_t data)                                      
         GPSirq.grcrs      = grcourse / 10;                                          // /10 to get deg * 10 according docu
         GPSirq.numSat     = satn;
         GPS_Present       = 1;                                                      // Show GPS is working
-        parsed            = true;                                                   // RDY
+        parsed            = 1;                                                      // RDY
         pstep             = 0;                                                      // Do nothing / Scan for sync
         break;
     }
@@ -554,7 +553,7 @@ static uint8_t hex_c(uint8_t n)                                                 
     return n;
 }
 
-static bool GPS_NMEA_newFrame(char c)
+static uint8_t GPS_NMEA_newFrame(char c)
 {
     uint8_t frameOK = 0;
     static uint8_t param = 0, offset = 0, parity = 0;
@@ -612,10 +611,11 @@ static bool GPS_NMEA_newFrame(char c)
         if (!checksum_param) parity ^= c;
     }
     if (frame) GPS_Present = 1;
-    return frameOK && (frame == FRAME_GGA);
+    if (frameOK && (frame == FRAME_GGA)) return 1;
+    else return 0;
 }
 
-static bool GPS_UBLOX_newFrame(uint8_t data)
+static uint8_t GPS_UBLOX_newFrame(uint8_t data)
 {
 #define Bufbytes 52                                                                 // Sizeof reports 52 Bytes no need to waste more
     static union                                                                    // UBLOX Receive buffer
@@ -629,7 +629,7 @@ static bool GPS_UBLOX_newFrame(uint8_t data)
     static uint16_t payloadlength, payloadcounter;
     static uint8_t  ck_a, ck_b, step = 0, UBXmsgid, UBXclass;
     static bool     newpos = false, newspd = false, nextfx = false;
-    bool parsed = false;
+    uint8_t parsed = 0;
 
 reset:
     switch (step)
@@ -717,7 +717,7 @@ reset:
         {
             newspd = false;
             newpos = false;
-            parsed = true;
+            parsed = 1;
         }
         GPS_Present = 1;
     }
