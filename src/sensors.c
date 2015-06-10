@@ -355,12 +355,12 @@ void Gyro_getADC(void)
 #define AbsAltExponent 0.1902949572f                              // double: 1.0 / 5.255
 void Baro_update(void)                                            // Note Pressure is now global for telemetry 1hPa = 1mBar
 {
-    static int32_t  BaroSpikeTab32[5];                            // Note: We don't care about runup bufferstate since first 50 runs are discarded anyway
+    static int32_t  BaroSpikeTab32[5], lastlastspike32 = 0;       // Note: We don't care about runup bufferstate since first 50 runs are discarded anyway
     static uint32_t LastGeneraltime, LastDataOutPut = 0;
     static uint16_t baroDeadline = 0;
     static uint8_t  state = 0;
-    int32_t lastval32;
-
+    int32_t lastspikeval32, BaroSum;
+  
     if (micros() - LastGeneraltime < baroDeadline) return;        // Make it rollover friendly
     switch (state)                                                // Statemachine to schedule Baro I2C actions
     {
@@ -383,10 +383,11 @@ void Baro_update(void)                                            // Note Pressu
     {
         state = 0;                                                // Reset statemachine
         ActualPressure = baro.calculate();                        // ActualPressure needed by mavlink
-        lastval32 = BaroSpikeTab32[2];                            // Save lastval from spiketab
+        lastspikeval32 = BaroSpikeTab32[2];                       // Save lastval from spiketab
         FiveElementSpikeFilterINT32((1.0f - powf(ActualPressure / 101325.0f, AbsAltExponent)) * 141856e3f, BaroSpikeTab32); // 4433000.0f * 32.0f
-        BaroAlt = (float)(BaroSpikeTab32[2] + lastval32) * (1.0f / 32.0f / 2.0f);// (1.0f / 32.0f / 2.0f) compiled to constant: 0.015625f
-
+        BaroSum = BaroSpikeTab32[2] + lastspikeval32 + lastlastspike32;
+        lastlastspike32 = lastspikeval32;
+        BaroAlt = (float)BaroSum * 0.01041666667f;                // (1.0f / 32.0f / 3.0f)
         newbaroalt = true;
         if (!GroundAltInitialized)
         {
