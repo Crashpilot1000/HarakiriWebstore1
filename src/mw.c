@@ -42,6 +42,7 @@ uint8_t  SonarStatus = 0;                                            // 0 = no c
 uint8_t  SonarBreach = 0;                                            // 0 = Breach unknown, 1 = breached lower limit, 2 = breached upper limit (not used)
 uint8_t  SonarLandWanted = 0;                                        // This is done to virtualize cfg.snr_land because failsafe can disable it and it could be saved in the worst case
 float    ActualPressure;
+float    GroundPressure = 1;                                         // Must be 1 to avoid div by zero // 101325.0f; MSL Pascal
 float    GroundAlt;
 float    BaroActualTemp;
 int16_t  ESCnoFlyThrottle;
@@ -1459,6 +1460,7 @@ static void computeRC(void)                                                     
     }
     else
     {
+        if (rcReadRawFunc == NULL) return;                                      // SHOULD never happen..
         for (chan = 0; chan < MAX_RC_CHANNELS; chan++)
         {
             if (chan > 3 + cfg.rc_auxch) rcDataSAVE[chan] = 1000;               // We are out of aux set to low

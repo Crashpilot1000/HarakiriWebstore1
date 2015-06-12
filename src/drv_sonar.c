@@ -334,7 +334,8 @@ static bool DaddyW_get_i2c_distance(volatile int32_t *distance)
 int32_t GetSnr(void)
 {
     volatile int32_t dist;
-    if(SnrReadoutPtr(&dist)) return dist;
+    if(SnrReadoutPtr == NULL) return 0;                         // SHOULD never happen..
+    if(SnrReadoutPtr(&dist))  return dist;
     else return 0;
 }
 #endif

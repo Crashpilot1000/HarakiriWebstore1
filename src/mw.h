@@ -688,6 +688,7 @@ extern uint8_t  SonarStatus;                // 0 = no contact, 1 = made contact,
 extern uint8_t  SonarBreach;                // 0 = Breach unknown, 1 = breached lower limit, 2 = breached upper limit (not used)
 extern uint8_t  SonarLandWanted;            // This is done to virtualize cfg.snr_land because failsafe can disable it and it could be saved in the worst case
 extern float    ActualPressure;
+extern float    GroundPressure;
 extern float    GroundAlt;
 extern int16_t  ESCnoFlyThrottle;
 extern bool     ForceRCExpInit;

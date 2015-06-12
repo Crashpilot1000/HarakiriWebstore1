@@ -1068,7 +1068,7 @@ static void cliStatus(char *cmdline)
     {
         k = min(NumberOfMotors, MAX_MONITORED_MOTORS);
         for (i = 0; i < k; i++) printf("Mot: %d Session Usage: %d%% Abs PWM: %d Rel to PWM range: %d%%\r\n", i + 1, motorpercent[i], motorabspwm[i],(motorabspwm[i] - cfg.esc_min) / tmpu16);
-    } else printMiscCLITXT(PRTNOSTATS);
+    } else printMiscCLITXT(PRTNOSTATS);    
 }
 
 static void cliWpflush(char *cmdline)

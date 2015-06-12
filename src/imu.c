@@ -179,15 +179,34 @@ void getEstimatedAltitude(void)
             {
             case 0:
                 IniCnt++;
-                if(IniCnt == 50)                                              // Waste 50 Cycles to let things (buffers) settle then ini some vars and proceed
+                if(IniCnt == 40)                                              // Waste Cycles to let things settle
                 {
                     memset(VarioTab, 0, sizeof(VarioTab));
                     EstAlt = GroundAlt = vario = 0;
+                    GroundPressure = ActualPressure;
                     IniCnt = 0;
                     IniStep++;
                 }
                 break;
-            case 1:
+            case 1:                                                           // Get Groundpressure
+                IniCnt++;
+                GroundPressure += ActualPressure;
+                if (IniCnt == 9)
+                {
+                    GroundPressure *= 0.1f;
+                    IniCnt = 0;
+                    IniStep++;
+                }
+                break;
+            case 2:                                                           // Let Filters settle
+                IniCnt++;
+                if (IniCnt == 10)
+                {
+                    IniCnt = 0;
+                    IniStep++;
+                }
+                break;
+            case 3:
                 GroundAlt           += BaroAlt;
                 AvgHzVarioCorrector += 1000000.0f / BaroDtUS;                 // Note: BaroDtUS can't be zero since it is initialized in the settle loop.
                 IniCnt++;

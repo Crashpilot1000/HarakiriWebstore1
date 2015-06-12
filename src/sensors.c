@@ -359,7 +359,7 @@ void Baro_update(void)                                            // Note Pressu
     static uint32_t LastGeneraltime, LastDataOutPut = 0;
     static uint16_t baroDeadline = 0;
     static uint8_t  state = 0;
-    int32_t lastspikeval32, BaroSum;
+    int32_t lastspike32, BaroSum;
   
     if (micros() - LastGeneraltime < baroDeadline) return;        // Make it rollover friendly
     switch (state)                                                // Statemachine to schedule Baro I2C actions
@@ -383,10 +383,10 @@ void Baro_update(void)                                            // Note Pressu
     {
         state = 0;                                                // Reset statemachine
         ActualPressure = baro.calculate();                        // ActualPressure needed by mavlink
-        lastspikeval32 = BaroSpikeTab32[2];                       // Save lastval from spiketab
-        FiveElementSpikeFilterINT32((1.0f - powf(ActualPressure / 101325.0f, AbsAltExponent)) * 141856e3f, BaroSpikeTab32); // 4433000.0f * 32.0f
-        BaroSum = BaroSpikeTab32[2] + lastspikeval32 + lastlastspike32;
-        lastlastspike32 = lastspikeval32;
+        lastspike32 = BaroSpikeTab32[2];                          // Save lastval from spiketab
+        FiveElementSpikeFilterINT32((1.0f - powf(ActualPressure / GroundPressure, AbsAltExponent)) * 141856e3f, BaroSpikeTab32); // 4433000.0f * 32.0f
+        BaroSum = BaroSpikeTab32[2] + lastspike32 + lastlastspike32;
+        lastlastspike32 = lastspike32;
         BaroAlt = (float)BaroSum * 0.01041666667f;                // (1.0f / 32.0f / 3.0f)
         newbaroalt = true;
         if (!GroundAltInitialized)
