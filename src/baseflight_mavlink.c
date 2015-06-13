@@ -450,7 +450,7 @@ void baseflight_mavlink_send_updates(void)                                      
         if (!(cycleCNT % 199) && sensors(SENSOR_BARO) && !(Currentprotocol == PROTOCOL_AUTOSENSE)) // every 1990ms (0.503Hz) for Pressure Pack except during Autosensing
         {
             mavlink_msg_scaled_pressure_pack(
-                MLSystemID, MLComponentID, &msg2, currentTimeMS, ActualPressure * 0.01f, 0, telemTemperature1 * 100);
+                MLSystemID, MLComponentID, &msg2, currentTimeMS, ActualPressure * 0.01f, 0, GyroTempC100);
             baseflight_mavlink_send_message(&msg2);
             return;
         }

@@ -148,7 +148,7 @@ static float ms5611_calculate(void)
         }
     }
     temp          -= T2;
-    BaroActualTemp = (float)temp * 0.01f;                        // Put out Temp (in C)
+    BaroActualTempC100 = temp;                                   // Put out Temp (in C * 100)
     off           -= (int64_t)off2;
     sens          -= (int64_t)sens2;
     return (float)(((((int64_t)ms5611_up * sens ) >> 21) - off) >> 15);

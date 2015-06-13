@@ -120,9 +120,9 @@ void hmc5883lRead(int16_t *magData)                             // Read aligned 
     uint8_t buf[6];
     int16_t swap;
     i2cRead(MAG_ADDRESS, MAG_DATA_REGISTER, 6, buf);
-    magData[0] = (((int16_t)buf[0]) << 8) | buf[1];             // X
-    magData[2] = (((int16_t)buf[2]) << 8) | buf[3];             // Z
-    magData[1] = (((int16_t)buf[4]) << 8) | buf[5];             // Y
+    magData[0] = (int16_t)(((uint16_t)buf[0] << 8) | buf[1]);   // X
+    magData[2] = (int16_t)(((uint16_t)buf[2] << 8) | buf[3]);   // Z
+    magData[1] = (int16_t)(((uint16_t)buf[4] << 8) | buf[5]);   // Y
     if (cfg.align[ALIGN_MAG][0])
     {
         alignSensors(ALIGN_MAG, magData);

@@ -95,7 +95,6 @@ typedef enum                                                // sync this with fe
 
 typedef void     (* sensorInitFuncPtr)(void);               // sensor init prototype
 typedef void     (* sensorReadFuncPtr)(int16_t *data);      // sensor read and align prototype
-typedef void     (* sensorReadFuncPtrFLT)(float *data);     // sensor read and align prototype
 typedef float    (* baroCalculateFuncPtr)(void);            // baro calculation (returns altitude in cm based on static data collected)
 typedef void     (* uartReceiveCallbackPtr)(uint16_t data); // used by uart2 driver to return frames to app
 typedef uint16_t (* rcReadRawDataPtr)(uint8_t chan);        // used by receiver driver to return channel data
@@ -105,7 +104,7 @@ typedef struct sensor_t
     sensorInitFuncPtr    init;
     sensorReadFuncPtr    read;
     sensorReadFuncPtr    align;
-    sensorReadFuncPtrFLT temperature;
+    sensorReadFuncPtr    senstempC100;
 } sensor_t;
 
 typedef struct baro_t

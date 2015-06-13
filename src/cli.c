@@ -1008,7 +1008,7 @@ static void cliStatus(char *cmdline)
         printMiscCLITXT(PRTFALLBACK);
         printxyzcalval(cfg.ShakyGyroZero);
     }
-    printf("\r\nTemp: %d",(int32_t)telemTemperature1);
+    printf("\r\nTemp: %d", GyroTempC100 / 100);
     if (sensors(SENSOR_ACC))
     {
         printMiscCLITXT(PRTACC);
@@ -1042,7 +1042,7 @@ static void cliStatus(char *cmdline)
         printMiscCLITXT(PRTBARO);
         if(baro.rep_delay == BMP085REPEATDELAY) printMiscCLITXT(PRTBMP085);
         else printMiscCLITXT(PRTMS5611);
-        printf("\r\nTemp: %d",(int32_t)BaroActualTemp);
+        printf("\r\nTemp: %d", BaroActualTempC100 / 100);
     }
     printMiscCLITXT(PRTSTATS);
     if (sensors(SENSOR_BARO) || sensors(SENSOR_GPS))

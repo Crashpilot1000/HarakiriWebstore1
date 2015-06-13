@@ -58,7 +58,7 @@ void computeIMU(void)
     if (MpuSpecial) GETMPU6050();
     else
     {
-        gyro.temperature(&telemTemperature1);                                 // Read out gyro temperature
+        gyro.senstempC100(&GyroTempC100);                                     // Read out gyro temperature in Celsius * 100
         Gyro_getADC();
         if (sensors(SENSOR_ACC)) ACC_getADC();
     }

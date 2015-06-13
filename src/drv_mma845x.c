@@ -78,9 +78,9 @@ static void mma8452Read(int16_t *accelData)
 {
     uint8_t buf[6];
     i2cRead(MMA8452_ADDRESS, MMA8452_OUT_X_MSB, 6, buf);
-    accelData[0] = ((int16_t)((buf[0] << 8) | buf[1]) >> 2) >> 2;
-    accelData[1] = ((int16_t)((buf[2] << 8) | buf[3]) >> 2) >> 2;
-    accelData[2] = ((int16_t)((buf[4] << 8) | buf[5]) >> 2) >> 2;
+    accelData[0] = ((int16_t)(((uint16_t)buf[0] << 8) | buf[1]) >> 2) >> 2;
+    accelData[1] = ((int16_t)(((uint16_t)buf[2] << 8) | buf[3]) >> 2) >> 2;
+    accelData[2] = ((int16_t)(((uint16_t)buf[4] << 8) | buf[5]) >> 2) >> 2;
 }
 
 static void mma8452Align(int16_t *accelData)

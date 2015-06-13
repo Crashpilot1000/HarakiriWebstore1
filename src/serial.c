@@ -93,7 +93,7 @@ uint8_t read8(void)
 uint16_t read16(void)
 {
     uint16_t t = read8();
-    t += (uint16_t) read8() << 8;
+    t += (uint16_t)read8() << 8;
     return t;
 }
 

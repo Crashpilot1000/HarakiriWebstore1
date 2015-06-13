@@ -108,7 +108,7 @@ static void sendBaro(void)
 static void sendTemperature1(void)
 {
     sendDataHead(ID_TEMPRATURE1);
-    serialize16((int16_t)telemTemperature1 / 10);
+    serialize16(GyroTempC100 / 1000);
 }
 
 static void sendTime(void)

@@ -29,6 +29,7 @@ static uint8_t mpuLowPassFilter = L3G4200D_DLPF_32HZ;
 static void l3g4200dInit(void);
 static void l3g4200dRead(int16_t *gyroData);
 static void l3g4200dAlign(int16_t *gyroData);
+static void l3g4200dReadTempC100(int16_t *tempData);
 
 bool l3g4200dDetect(sensor_t *gyro)
 {
@@ -36,9 +37,10 @@ bool l3g4200dDetect(sensor_t *gyro)
     delay(25);
     i2cRead(L3G4200D_ADDRESS, L3G4200D_WHO_AM_I, 1, &deviceid);
     if (deviceid != L3G4200D_ID) return false;
-    gyro->init = l3g4200dInit;
-    gyro->read = l3g4200dRead;
-    gyro->align = l3g4200dAlign;
+    gyro->init         = l3g4200dInit;
+    gyro->read         = l3g4200dRead;
+    gyro->align        = l3g4200dAlign;
+    gyro->senstempC100 = l3g4200dReadTempC100;
     return true;
 }
 
@@ -50,7 +52,7 @@ void l3g4200dConfig(void)
         mpuLowPassFilter = L3G4200D_DLPF_32HZ;
         break;
     default:
-        cfg.gy_lpf = 54;                                     // Feedback for CLI if user typed in something like "90"
+        cfg.gy_lpf = 54;                                      // Feedback for CLI if user typed in something like "90"
     case 54:
         mpuLowPassFilter = L3G4200D_DLPF_54HZ;
         break;
@@ -81,12 +83,16 @@ static void l3g4200dAlign(int16_t *gyroData)
     gyroData[2] = -gyroData[2];
 }
 
-// Read 3 gyro values into user-provided buffer. No overrun checking is done.
-static void l3g4200dRead(int16_t *gyroData)
+static void l3g4200dRead(int16_t *gyroData)                   // Read 3 gyro values into user-provided buffer. No overrun checking is done.
 {
     uint8_t buf[6];
     i2cRead(L3G4200D_ADDRESS, L3G4200D_GYRO_OUT, 6, buf);
-    gyroData[1] = (int16_t)((buf[0] << 8) | buf[1]);
-    gyroData[0] = (int16_t)((buf[2] << 8) | buf[3]);
-    gyroData[2] = (int16_t)((buf[4] << 8) | buf[5]);
+    gyroData[1] = (int16_t)(((uint16_t)buf[0] << 8) | buf[1]);
+    gyroData[0] = (int16_t)(((uint16_t)buf[2] << 8) | buf[3]);
+    gyroData[2] = (int16_t)(((uint16_t)buf[4] << 8) | buf[5]);
+}
+
+static void l3g4200dReadTempC100(int16_t *tempData)
+{
+    *tempData = 0;                                            // Fixme when we have temp compensation for gyro
 }

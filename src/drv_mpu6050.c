@@ -28,7 +28,7 @@ static void mpu6050AccAlign(int16_t *accData);
 static void mpu6050GyroInit(void);
 static void mpu6050GyroRead(int16_t *gyroData);
 static void mpu6050GyroAlign(int16_t *gyroData);
-static void mpu6050TempRead(float *tempData);
+static void mpu6050ReadTempC100(int16_t *tempData);
 
 bool mpu6050Detect(sensor_t * acc, sensor_t * gyro)
 {
@@ -43,13 +43,13 @@ bool mpu6050Detect(sensor_t * acc, sensor_t * gyro)
     // The least significant bit of the MPU-60X0’s I2C address is determined by the value of the AD0 pin. (we know that already).
     // But here's the best part: The value of the AD0 pin is not reflected in this register.
     if (sig != (MPU6050_ADDRESS & 0x7e)) return false;
-    acc->init         = mpu6050AccInit;
-    acc->read         = mpu6050AccRead;
-    acc->align        = mpu6050AccAlign;
-    gyro->init        = mpu6050GyroInit;
-    gyro->read        = mpu6050GyroRead;
-    gyro->align       = mpu6050GyroAlign;
-    gyro->temperature = mpu6050TempRead;
+    acc->init          = mpu6050AccInit;
+    acc->read          = mpu6050AccRead;
+    acc->align         = mpu6050AccAlign;
+    gyro->init         = mpu6050GyroInit;
+    gyro->read         = mpu6050GyroRead;
+    gyro->align        = mpu6050GyroAlign;
+    gyro->senstempC100 = mpu6050ReadTempC100;
     return true;
 }
 
@@ -116,27 +116,27 @@ static void mpu6050AccRead(int16_t *accData)
 {
     uint8_t buf[6];
     i2cRead(MPU6050_ADDRESS, MPU_RA_ACCEL_XOUT_H, 6, buf);
-    accData[0] = (((int16_t)buf[0]) << 8) | buf[1];
-    accData[1] = (((int16_t)buf[2]) << 8) | buf[3];
-    accData[2] = (((int16_t)buf[4]) << 8) | buf[5];
+    accData[0] = (int16_t)(((uint16_t)buf[0] << 8) | buf[1]);
+    accData[1] = (int16_t)(((uint16_t)buf[2] << 8) | buf[3]);
+    accData[2] = (int16_t)(((uint16_t)buf[4] << 8) | buf[5]);
 }
 
 static void mpu6050GyroRead(int16_t *gyroData)
 {
     uint8_t buf[6];
     i2cRead(MPU6050_ADDRESS, MPU_RA_GYRO_XOUT_H, 6, buf);
-    gyroData[0] = (((int16_t)buf[0]) << 8) | buf[1];         // Changed to full resolution here
-    gyroData[1] = (((int16_t)buf[2]) << 8) | buf[3];
-    gyroData[2] = (((int16_t)buf[4]) << 8) | buf[5];
+    gyroData[0] = (int16_t)(((uint16_t)buf[0] << 8) | buf[1]);// Changed to full resolution here
+    gyroData[1] = (int16_t)(((uint16_t)buf[2] << 8) | buf[3]);
+    gyroData[2] = (int16_t)(((uint16_t)buf[4] << 8) | buf[5]);
 }
 
-static void mpu6050TempRead(float *tempData)
+static void mpu6050ReadTempC100(int16_t *tempData)           // Output is in Degree * 100
 {
     uint8_t buf[2];
-    int16_t temp;
+    int32_t temp;
     i2cRead(MPU6050_ADDRESS, MPU_RA_TEMP_OUT_H, 2, buf);
-    temp = (((int16_t)buf[0]) << 8) | buf[1];
-    *tempData = 36.53f + ((float)temp / 340.0f);             // That is what the invense doc says. Here Arduinopage: *tempData = ((float)temp + 12412.0f) / 340.0f;
+    temp = (int16_t)(((uint16_t)buf[0] << 8) | buf[1]);
+    *tempData = 3653 + ((100 * temp) / 340);                 // *tempData = 36.53f + ((float)temp / 340.0f); // That is what the invense doc says
 }
 
 static void mpu6050AccAlign(int16_t *accData)
@@ -151,22 +151,22 @@ static void mpu6050GyroAlign(int16_t *gyroData)
     gyroData[2] = -gyroData[2];
 }
 
-void MPU6050ReadAllShit(int16_t *accData, float *tempData, int16_t *gyroData)
+void MPU6050ReadAllShit(int16_t *accData, int16_t *tempData, int16_t *gyroData)
 {
 //  0x3B acc  6 bytes
 //  0x41 temp 2 bytes
 //  0x43 gyro 6 bytes
     uint8_t buf[14];
-    int16_t temp;
+    int32_t temp;
     i2cRead(MPU6050_ADDRESS, MPU_RA_ACCEL_XOUT_H, 14, buf);
-    accData[0]  = (((int16_t)buf[0])  << 8) | buf[1];
-    accData[1]  = (((int16_t)buf[2])  << 8) | buf[3];
-    accData[2]  = (((int16_t)buf[4])  << 8) | buf[5];
-    temp        = (((int16_t)buf[6])  << 8) | buf[7];
-    *tempData   = 36.53f + ((float)temp / 340.0f);           // That is what the invense doc says. Here Arduinopage: *tempData = ((float)temp + 12412.0f) / 340.0f;
-    gyroData[0] = (((int16_t)buf[8])  << 8) | buf[9];
-    gyroData[1] = (((int16_t)buf[10]) << 8) | buf[11];
-    gyroData[2] = (((int16_t)buf[12]) << 8) | buf[13];
+    accData[0]  = (int16_t)(((uint16_t)buf[0]  << 8) | buf[1]);
+    accData[1]  = (int16_t)(((uint16_t)buf[2]  << 8) | buf[3]);
+    accData[2]  = (int16_t)(((uint16_t)buf[4]  << 8) | buf[5]);
+    temp        = (int16_t)(((uint16_t)buf[6]  << 8) | buf[7]);
+    gyroData[0] = (int16_t)(((uint16_t)buf[8]  << 8) | buf[9]);
+    gyroData[1] = (int16_t)(((uint16_t)buf[10] << 8) | buf[11]);
+    gyroData[2] = (int16_t)(((uint16_t)buf[12] << 8) | buf[13]);
+    *tempData   = 3653 + ((100 * temp) / 340);               // *tempData   = 36.53f + ((float)temp / 340.0f); // That is what the invense doc says.
 }
 
 //Degrees C = (TEMP_OUT Register Value as a signed quantity)/340 + 36.53

@@ -643,7 +643,7 @@ extern int32_t  sonarAlt;
 extern float    EstAlt;
 extern float    AltHold;
 extern float    vario;
-extern float    BaroActualTemp;
+extern int16_t  BaroActualTempC100;
 extern int16_t  BaroP;
 extern int16_t  BaroI;
 extern int16_t  BaroD;
@@ -657,7 +657,7 @@ extern int16_t  rcData[MAX_RC_CHANNELS];
 extern int16_t  rcDataSAVE[MAX_RC_CHANNELS];
 extern uint8_t  rssi;                       // 0 - 255 = 0%-100%
 extern uint8_t  vbat;
-extern float    telemTemperature1;          // gyro sensor temperature
+extern int16_t  GyroTempC100;               // gyro sensor temperature in celsius * 100
 
 extern uint8_t  motorpercent[MAX_MONITORED_MOTORS];
 extern uint16_t motorabspwm[MAX_MONITORED_MOTORS];
@@ -785,7 +785,7 @@ void     Baro_update(void);
 void     Gyro_getADC(void);
 void     Mag_getADC(void);
 void     Sonar_update(void);
-void     MPU6050ReadAllShit(int16_t *accData, float *tempData, int16_t *gyroData);
+void     MPU6050ReadAllShit(int16_t *accData, int16_t *tempData, int16_t *gyroData);
 void     GETMPU6050(void);
 
 // Output

@@ -9,7 +9,7 @@ uint32_t currentTime   = 0;
 uint32_t currentTimeMS = 0;
 float    FLOATcycleTime = 0;
 uint8_t  vbat;                                                       // battery voltage in 0.1V steps
-float    telemTemperature1;                                          // gyro sensor temperature
+int16_t  GyroTempC100;                                               // gyro sensor temperature in celsius * 100
 volatile uint16_t failsafeCnt   = 0;
 float    TiltValue;                                                  // 1.0 is horizontal 0 is vertical, minus is upsidedown
 int16_t  rcData[MAX_RC_CHANNELS];                                    // RC RAWDATA int16_t rcData[8] = { 1502, 1502, 1502, 1502, 1502, 1502, 1502, 1502 }; // interval [1000;2000]
@@ -44,7 +44,7 @@ uint8_t  SonarLandWanted = 0;                                        // This is 
 float    ActualPressure;
 float    GroundPressure = 1;                                         // Must be 1 to avoid div by zero // 101325.0f; MSL Pascal
 float    GroundAlt;
-float    BaroActualTemp;
+int16_t  BaroActualTempC100;
 int16_t  ESCnoFlyThrottle;
 static   uint8_t GoodRCcnt;                                          // Number of good consecutive Signals before arming
 static   int16_t FSBaroThrottle = 0;

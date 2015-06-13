@@ -307,7 +307,7 @@ void GETMPU6050(void)
     int16_t accADC16[3];  
     int16_t gyroADC16[3];
     uint8_t i;
-    MPU6050ReadAllShit(accADC16, &telemTemperature1, gyroADC16);
+    MPU6050ReadAllShit(accADC16, &GyroTempC100, gyroADC16);
     if (cfg.align[ALIGN_ACCEL][0]) alignSensors(ALIGN_ACCEL, accADC16); else acc.align(accADC16);
     if (cfg.align[ALIGN_GYRO][0])  alignSensors(ALIGN_GYRO, gyroADC16); else gyro.align(gyroADC16);  
     for (i = 0; i < 3; i++)
@@ -348,11 +348,16 @@ void Gyro_getADC(void)
 }
 
 #ifdef BARO
-// Current Timing:
-// MS5611: 51 Hz
-// BMP085: 32.9 Hz
-// For Reference the double version: FiveElementSpikeFilterINT32((1.0 - pow((double)ActualPressure / 101325.0, AbsAltExponent)) * 141856000.0, BaroSpikeTab32); // 4433000.0 * 32
-#define AbsAltExponent 0.1902949572f                              // double: 1.0 / 5.255
+/*
+Current Timing:
+MS5611: 51 Hz
+BMP085: 32.9 Hz
+For Reference the double version: FiveElementSpikeFilterINT32((1.0 - pow((double)ActualPressure / 101325.0, AbsAltExponent)) * 141856000.0, BaroSpikeTab32); // 4433000.0 * 32
+AbsAltExponent 0.1902612003f                              // More precise number? by using less rounding on physical constants
+The "other" number would be 44330,769230769230769230769230769
+and represents temperature(K = Clesius + 273,15) at base height / ideal gas constant(287.05)
+*/
+#define AbsAltExponent 0.1902949572f                              // double: 1.0 / 5.255 Taken from the BMP085 Manual
 void Baro_update(void)                                            // Note Pressure is now global for telemetry 1hPa = 1mBar
 {
     static int32_t  BaroSpikeTab32[5], lastlastspike32 = 0;       // Note: We don't care about runup bufferstate since first 50 runs are discarded anyway

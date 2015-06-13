@@ -30,7 +30,7 @@ static uint8_t mpuLowPassFilter = MPU3050_DLPF_42HZ;
 static void mpu3050Init(void);
 static void mpu3050Read(int16_t *gyroData);
 static void mpu3050Align(int16_t *gyroData);
-static void mpu3050ReadTemp(float *tempData);
+static void mpu3050ReadTempC100(int16_t *tempData);
 
 bool mpu3050Detect(sensor_t *gyro)
 {
@@ -38,10 +38,10 @@ bool mpu3050Detect(sensor_t *gyro)
     delay(35);                                                // datasheet page 13 says 20ms. other stuff could have been running meanwhile. but we'll be safe
     ack = i2cWrite(MPU3050_ADDRESS, MPU3050_SMPLRT_DIV, 0);
     if (!ack) return false;
-    gyro->init        = mpu3050Init;
-    gyro->read        = mpu3050Read;
-    gyro->align       = mpu3050Align;
-    gyro->temperature = mpu3050ReadTemp;
+    gyro->init         = mpu3050Init;
+    gyro->read         = mpu3050Read;
+    gyro->align        = mpu3050Align;
+    gyro->senstempC100 = mpu3050ReadTempC100;
     return true;
 }
 
@@ -59,7 +59,7 @@ void mpu3050Config(void)
         mpuLowPassFilter = MPU3050_DLPF_98HZ;
         break;
     default:
-        cfg.gy_lpf = 42;                                     // Feedback for CLI if user typed in something like "90"
+        cfg.gy_lpf = 42;                                      // Feedback for CLI if user typed in something like "90"
     case 42:
         mpuLowPassFilter = MPU3050_DLPF_42HZ;
         break;
@@ -76,7 +76,7 @@ void mpu3050Config(void)
 static void mpu3050Init(void)
 {
     bool ack;
-    delay(35);                                              // datasheet page 13 says 20ms. other stuff could have been running meanwhile. but we'll be safe
+    delay(35);                                                // datasheet page 13 says 20ms. other stuff could have been running meanwhile. but we'll be safe
     ack = i2cWrite(MPU3050_ADDRESS, MPU3050_SMPLRT_DIV, 0);
     if (!ack) failureMode(3);
     i2cWrite(MPU3050_ADDRESS, MPU3050_DLPF_FS_SYNC, MPU3050_FS_SEL_2000DPS | mpuLowPassFilter);
@@ -87,7 +87,7 @@ static void mpu3050Init(void)
 
 static void mpu3050Align(int16_t *gyroData)
 {
-    gyroData[0] =  gyroData[0];    // official direction is RPY
+    gyroData[0] =  gyroData[0];                               // official direction is RPY
     gyroData[1] =  gyroData[1];
     gyroData[2] = -gyroData[2];
 }
@@ -97,16 +97,16 @@ static void mpu3050Read(int16_t *gyroData)
 {
     uint8_t buf[6];
     i2cRead(MPU3050_ADDRESS, MPU3050_GYRO_OUT, 6, buf);
-    gyroData[0] = (((int16_t)buf[0]) << 8) | buf[1];    // Changed to full resolution here
-    gyroData[1] = (((int16_t)buf[2]) << 8) | buf[3];
-    gyroData[2] = (((int16_t)buf[4]) << 8) | buf[5];
+    gyroData[0] = (int16_t)(((uint16_t)buf[0] << 8) | buf[1]);// Changed to full resolution here
+    gyroData[1] = (int16_t)(((uint16_t)buf[2] << 8) | buf[3]);
+    gyroData[2] = (int16_t)(((uint16_t)buf[4] << 8) | buf[5]);
 }
 
-static void mpu3050ReadTemp(float *tempData)
+static void mpu3050ReadTempC100(int16_t *tempData)            // Output is in Degree * 100
 {
     uint8_t buf[2];
-    int16_t temp;
+    int32_t temp;
     i2cRead(MPU3050_ADDRESS, MPU3050_TEMP_OUT, 2, buf);
-    temp = (int16_t)((buf[0] << 8) | buf[1]);
-    *tempData = 35.0f + (((float)temp + 13200.0f) / 280.0f);
+    temp = (int16_t)(((uint16_t)buf[0] << 8) | buf[1]);
+    *tempData = 3500 + ((100 * (temp + 13200)) / 280);        // *tempData = 35.0f + (((float)temp + 13200.0f) / 280.0f);
 }
