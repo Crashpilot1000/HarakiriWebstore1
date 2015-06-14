@@ -58,9 +58,9 @@ static void adxl345Read(int16_t *accelData)
 {
     uint8_t buf[8];
     i2cRead(ADXL345_ADDRESS, ADXL345_DATA_OUT, 6, buf);
-    accelData[0] = (int16_t)(((uint16_t)buf[1] << 8) | buf[0]);
-    accelData[1] = (int16_t)(((uint16_t)buf[3] << 8) | buf[2]);
-    accelData[2] = (int16_t)(((uint16_t)buf[5] << 8) | buf[4]);
+    accelData[0] = (int16_t)combine(buf[1], buf[0]);
+    accelData[1] = (int16_t)combine(buf[3], buf[2]);
+    accelData[2] = (int16_t)combine(buf[5], buf[4]);
 }
 
 static void adxl345Align(int16_t *accData)

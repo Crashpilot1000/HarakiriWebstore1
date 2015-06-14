@@ -281,7 +281,7 @@ static bool SRF_get_i2c_distance(volatile int32_t *distance)
     CheckDisconnect();
     if(i2cRead(SONARSRF_ADDRESS, SONARSRF_DISTANCE_HIGH, 2, buf))
     {
-        temp      = (int16_t)(((uint16_t)buf[0] << 8) | buf[1]);
+        temp      = (int16_t)combine(buf[0], buf[1]);
         *distance = (int32_t)temp;
         calltime  = micros();
         i2cWrite(SONARSRF_ADDRESS, SONARSRF_CMDREG, SONARSRF_COMMAND);// restart ranging
@@ -302,7 +302,7 @@ static bool MBX_get_i2c_distance(volatile int32_t *distance)
     i2cFastSpeed(false);                                        // set I2C Standard mode
     if(i2cRead(SONARMBX_ADDRESS, 0xFF, 2, buf))
     {
-        temp      = (int16_t)(((uint16_t)buf[0] << 8) | buf[1]);
+        temp      = (int16_t)combine(buf[0], buf[1]);
         *distance = (int32_t)temp;
         calltime  = micros();
         i2cWrite(SONARMBX_ADDRESS, 0xFF, SONARMBX_COMMAND);     // restart ranging
@@ -323,7 +323,7 @@ static bool DaddyW_get_i2c_distance(volatile int32_t *distance)
     CheckDisconnect();
     if(i2cRead(SONARDW_ADDRESS, SONARDW_DISTANCE_OUT, 2, buf))
     {
-        temp      = (int16_t)(((uint16_t)buf[1] << 8) | buf[0]);
+        temp      = (int16_t)combine(buf[1], buf[0]);
         *distance = (int32_t)(temp / UncompDivisor);
         calltime  = micros();
 	  }

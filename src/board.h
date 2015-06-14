@@ -39,6 +39,7 @@
 
 #define RCconstPI   0.159154943092f                         // 0.5f / M_PI;
 
+#define combine(a, b) (((uint16_t)a  << 8) | b)             // used for I2C Sensor data
 #define min(a, b) ((a) < (b) ? (a) : (b))
 #define max(a, b) ((a) > (b) ? (a) : (b))
 // #define abs(x) ((x) > 0 ? (x) : -(x))
