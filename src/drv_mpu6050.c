@@ -116,18 +116,18 @@ static void mpu6050AccRead(int16_t *accData)
 {
     uint8_t buf[6];
     i2cRead(MPU6050_ADDRESS, MPU_RA_ACCEL_XOUT_H, 6, buf);
-    accData[0] = (int16_t)combine(buf[0], buf[1]);
-    accData[1] = (int16_t)combine(buf[2], buf[3]);
-    accData[2] = (int16_t)combine(buf[4], buf[5]);
+    accData[0] = combine16(buf[0], buf[1]);
+    accData[1] = combine16(buf[2], buf[3]);
+    accData[2] = combine16(buf[4], buf[5]);
 }
 
 static void mpu6050GyroRead(int16_t *gyroData)
 {
     uint8_t buf[6];
     i2cRead(MPU6050_ADDRESS, MPU_RA_GYRO_XOUT_H, 6, buf);
-    gyroData[0] = (int16_t)combine(buf[0], buf[1]);          // Changed to full resolution here
-    gyroData[1] = (int16_t)combine(buf[2], buf[3]);
-    gyroData[2] = (int16_t)combine(buf[4], buf[5]);
+    gyroData[0] = combine16(buf[0], buf[1]);                 // Changed to full resolution here
+    gyroData[1] = combine16(buf[2], buf[3]);
+    gyroData[2] = combine16(buf[4], buf[5]);
 }
 
 static void mpu6050ReadTempC100(int16_t *tempData)           // Output is in Degree * 100
@@ -135,7 +135,7 @@ static void mpu6050ReadTempC100(int16_t *tempData)           // Output is in Deg
     uint8_t buf[2];
     int32_t temp;
     i2cRead(MPU6050_ADDRESS, MPU_RA_TEMP_OUT_H, 2, buf);
-    temp = (int16_t)combine(buf[0], buf[1]);
+    temp = (int16_t)combine16(buf[0], buf[1]);
     *tempData = 3653 + ((100 * temp) / 340);                 // *tempData = 36.53f + ((float)temp / 340.0f); // That is what the invense doc says
 }
 
@@ -159,14 +159,13 @@ void MPU6050ReadAllShit(int16_t *accData, int16_t *tempData, int16_t *gyroData)
     uint8_t buf[14];
     int32_t temp;
     i2cRead(MPU6050_ADDRESS, MPU_RA_ACCEL_XOUT_H, 14, buf);
-    accData[0]  = (int16_t)combine(buf[0],  buf[1]);
-    accData[1]  = (int16_t)combine(buf[2],  buf[3]);
-    accData[2]  = (int16_t)combine(buf[4],  buf[5]);
-    temp        = (int16_t)combine(buf[6],  buf[7]);
-    gyroData[0] = (int16_t)combine(buf[8],  buf[9]);
-    gyroData[1] = (int16_t)combine(buf[10], buf[11]);
-    gyroData[2] = (int16_t)combine(buf[12], buf[13]);
+    accData[0]  = combine16(buf[0],  buf[1]);
+    accData[1]  = combine16(buf[2],  buf[3]);
+    accData[2]  = combine16(buf[4],  buf[5]);
+    temp        = (int16_t)combine16(buf[6], buf[7]);
+    gyroData[0] = combine16(buf[8],  buf[9]);
+    gyroData[1] = combine16(buf[10], buf[11]);
+    gyroData[2] = combine16(buf[12], buf[13]);
     *tempData   = 3653 + ((100 * temp) / 340);               // *tempData   = 36.53f + ((float)temp / 340.0f); // That is what the invense doc says.
 }
-
 //Degrees C = (TEMP_OUT Register Value as a signed quantity)/340 + 36.53

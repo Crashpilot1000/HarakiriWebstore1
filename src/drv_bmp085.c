@@ -70,7 +70,7 @@ static void bmp085_get_ut(void)
 {
     uint8_t data[2];
     i2cRead(BMP085_I2C_ADDR, BMP085_ADC_OUT_MSB_REG, 2, data);
-    bmp085_ut = (uint16_t)combine(data[0], data[1]);
+    bmp085_ut = combine16(data[0], data[1]);
 }
 
 static void bmp085_start_up(void)
@@ -111,15 +111,15 @@ static void bmp085_get_cal_param(void)
 {
     uint8_t data[22];
     i2cRead(BMP085_I2C_ADDR, BMP085_PROM_START__ADDR, BMP085_PROM_DATA__LEN, data);
-    bmp085.ac1 = (int16_t) combine(data[0] , data[1]);
-    bmp085.ac2 = (int16_t) combine(data[2] , data[3]);
-    bmp085.ac3 = (int16_t) combine(data[4] , data[5]);
-    bmp085.ac4 = (uint16_t)combine(data[6] , data[7]);
-    bmp085.ac5 = (uint16_t)combine(data[8] , data[9]);
-    bmp085.ac6 = (uint16_t)combine(data[10], data[11]);
-    bmp085.b1  = (int16_t) combine(data[12], data[13]);
-    bmp085.b2  = (int16_t) combine(data[14], data[15]);
-    bmp085.mb  = (int16_t) combine(data[16], data[17]);
-    bmp085.mc  = (int16_t) combine(data[18], data[19]);
-    bmp085.md  = (int16_t) combine(data[20], data[21]);
+    bmp085.ac1 = combine16(data[0] , data[1]);
+    bmp085.ac2 = combine16(data[2] , data[3]);
+    bmp085.ac3 = combine16(data[4] , data[5]);
+    bmp085.ac4 = combine16(data[6] , data[7]);
+    bmp085.ac5 = combine16(data[8] , data[9]);
+    bmp085.ac6 = combine16(data[10], data[11]);
+    bmp085.b1  = combine16(data[12], data[13]);
+    bmp085.b2  = combine16(data[14], data[15]);
+    bmp085.mb  = combine16(data[16], data[17]);
+    bmp085.mc  = combine16(data[18], data[19]);
+    bmp085.md  = combine16(data[20], data[21]);
 }

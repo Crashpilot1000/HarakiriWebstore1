@@ -97,9 +97,9 @@ static void mpu3050Read(int16_t *gyroData)
 {
     uint8_t buf[6];
     i2cRead(MPU3050_ADDRESS, MPU3050_GYRO_OUT, 6, buf);
-    gyroData[0] = (int16_t)combine(buf[0], buf[1]);           // Changed to full resolution here
-    gyroData[1] = (int16_t)combine(buf[2], buf[3]);
-    gyroData[2] = (int16_t)combine(buf[4], buf[5]);
+    gyroData[0] = combine16(buf[0], buf[1]);                  // Changed to full resolution here
+    gyroData[1] = combine16(buf[2], buf[3]);
+    gyroData[2] = combine16(buf[4], buf[5]);
 }
 
 static void mpu3050ReadTempC100(int16_t *tempData)            // Output is in Degree * 100
@@ -107,6 +107,6 @@ static void mpu3050ReadTempC100(int16_t *tempData)            // Output is in De
     uint8_t buf[2];
     int32_t temp;
     i2cRead(MPU3050_ADDRESS, MPU3050_TEMP_OUT, 2, buf);
-    temp = (int16_t)combine(buf[0], buf[1]);
+    temp = (int16_t)combine16(buf[0], buf[1]);
     *tempData = 3500 + ((100 * (temp + 13200)) / 280);        // *tempData = 35.0f + (((float)temp + 13200.0f) / 280.0f);
 }

@@ -66,7 +66,7 @@ static uint16_t ms5611_prom(int8_t coef_num)
     uint8_t  rxbuf[2] = { 0, 0 };
     delay(10);
     i2cRead(MS5611_ADDR, CMD_PROM_RD + coef_num * 2, 2, rxbuf);  // send PROM READ command
-    return (uint16_t)combine(rxbuf[0], rxbuf[1]);
+    return combine16(rxbuf[0], rxbuf[1]);
 }
 
 static uint32_t ms5611_read_adc(void)

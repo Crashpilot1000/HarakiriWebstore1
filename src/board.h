@@ -39,10 +39,10 @@
 
 #define RCconstPI   0.159154943092f                         // 0.5f / M_PI;
 
-#define combine(a, b) (((uint16_t)a  << 8) | b)             // used for I2C Sensor data
+#define combine16(a, b) (((uint16_t)a  << 8) | b)           // Used for I2C Sensor data. WARNING! MAKE SURE THE TARGET IS INT_16 OR UINT_16! Or put directive in front of it like: (int16_t)combine16(foo,bar)
 #define min(a, b) ((a) < (b) ? (a) : (b))
 #define max(a, b) ((a) > (b) ? (a) : (b))
-// #define abs(x) ((x) > 0 ? (x) : -(x))
+// #define abs(x) ((x) > 0 ? (x) : -(x)) USE abs_int() or fabsf() instead.
 #define constrain(amt, low, high) ((amt) < (low) ? (low) : ((amt) > (high) ? (high) : (amt)))
 
 // max. number of supported channels 10 = 6 Aux + 4 (roll pitch yaw thr)
