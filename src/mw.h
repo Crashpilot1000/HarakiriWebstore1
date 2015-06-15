@@ -644,6 +644,7 @@ extern float    EstAlt;
 extern float    AltHold;
 extern float    vario;
 extern int16_t  BaroActualTempC100;
+extern int16_t  BaroGroundTempC100;
 extern int16_t  BaroP;
 extern int16_t  BaroI;
 extern int16_t  BaroD;

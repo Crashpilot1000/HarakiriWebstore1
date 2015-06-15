@@ -194,6 +194,7 @@ void getEstimatedAltitude(void)
                 if (IniCnt == 9)
                 {
                     GroundPressure *= 0.1f;
+                    BaroGroundTempC100 = BaroActualTempC100;                  // No averaging needed here
                     IniCnt = 0;
                     IniStep++;
                 }
