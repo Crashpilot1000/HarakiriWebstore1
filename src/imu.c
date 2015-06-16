@@ -183,7 +183,8 @@ void getEstimatedAltitude(void)
                 {
                     memset(VarioTab, 0, sizeof(VarioTab));
                     EstAlt = GroundAlt = vario = 0;
-                    GroundPressure = ActualPressure;
+                    GroundPressure     = ActualPressure;
+                    BaroGroundTempC100 = BaroActualTempC100;                  // No averaging needed here
                     IniCnt = 0;
                     IniStep++;
                 }
@@ -194,12 +195,11 @@ void getEstimatedAltitude(void)
                 if (IniCnt == 9)
                 {
                     GroundPressure *= 0.1f;
-                    BaroGroundTempC100 = BaroActualTempC100;                  // No averaging needed here
                     IniCnt = 0;
                     IniStep++;
                 }
                 break;
-            case 2:                                                           // Let Filters settle
+            case 2:                                                           // Let Filters settle for 10 runs
                 IniCnt++;
                 if (IniCnt == 10)
                 {
@@ -208,9 +208,9 @@ void getEstimatedAltitude(void)
                 }
                 break;
             case 3:
+                IniCnt++;
                 GroundAlt           += BaroAlt;
                 AvgHzVarioCorrector += 1000000.0f / BaroDtUS;                 // Note: BaroDtUS can't be zero since it is initialized in the settle loop.
-                IniCnt++;
                 if (IniCnt == 50)                                             // Gather 50 values
                 {
                     GroundAlt  *= 0.02f;

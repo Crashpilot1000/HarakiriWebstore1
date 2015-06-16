@@ -45,7 +45,7 @@ float    ActualPressure;
 float    GroundPressure = 1;                                         // Must be 1 to avoid div by zero // 101325.0f; MSL Pascal
 float    GroundAlt;
 int16_t  BaroActualTempC100;
-int16_t  BaroGroundTempC100;
+int16_t  BaroGroundTempC100 = 0;                                     // Needs to be zero here
 int16_t  ESCnoFlyThrottle;
 static   uint8_t GoodRCcnt;                                          // Number of good consecutive Signals before arming
 static   int16_t FSBaroThrottle = 0;
