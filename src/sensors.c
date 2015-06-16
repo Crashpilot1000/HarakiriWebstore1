@@ -358,8 +358,8 @@ There you can read: "This is using a super high accuracy barometric altitude com
 atmosphere tables in the troposphere (up to 11,000 m amsl)" There is no info how the "magic numbers" were gathered.
 The implementation here does not constantly calculate a new temperature correction factor because doing that only once on startup
 gives me the better results - that maybe because of the pressure / temperature correction already done in the Baro - driver.
-The calculation of the formula is split up in 2 parts and spread around the tasks ("state") to avoid CPU spikes.
-Benchtests suggest it is working better than this:
+The calculation of the formula is not split up because the use of logf() and expf() together is 9,8 times FASTER than a single powf() instruction (measured on naze).
+Benchtests suggest it is working better than this (and 9,8 times faster..):
 #define AbsAltExponent   0.1902612003f                            // More precise number by using less rounding on physical constants
 #define BaroTempCorMeter 44330.7692307692f                        // Let compiler wrap this to float. Was 44330 before.
 FiveElementSpikeFilterINT32(3200.0f * ((1.0f - powf(ActualPressure / GroundPressure, AbsAltExponent)) * BaroTempCorMeter), BaroSpikeTab32); // Result in cm * 32
@@ -369,9 +369,9 @@ void Baro_update(void)                                            // Note Pressu
 {
     static int32_t  BaroSpikeTab32[5], lastlastspike32 = 0;       // Note: We don't care about runup bufferstate since first 50 runs are discarded anyway
     static uint32_t LastGeneraltime, LastDataOutPut = 0;
-    static float    PressScale;                                   // Used to spread cpu intensive calculation across runs
     static uint16_t baroDeadline = 0;
     static uint8_t  state = 0;
+    float   PressScale;
     int32_t lastspike32, BaroSum;
   
     if (micros() - LastGeneraltime < baroDeadline) return;        // Make it rollover friendly
@@ -392,9 +392,12 @@ void Baro_update(void)                                            // Note Pressu
         break;
     }
     LastGeneraltime = micros();                                   // Timestamp after I2C actions
-    if (state == 0)                                               // We piece stuff together from the previous runs here. Will be way off in iniphase.
+    if (state == 2)
     {
+        state = 0;                                                // Reset statemachine
+        ActualPressure = baro.calculate();                        // ActualPressure needed by mavlink. Unit: Pa (Pascal) note: 100Pa = 1hPa =  1mbar
         lastspike32 = BaroSpikeTab32[2];                          // Save lastval from spiketab
+        PressScale = 0.190259f * logf(ActualPressure / GroundPressure);// Scale will be way off during initialization, thats why settle buffers is done in IMU
         FiveElementSpikeFilterINT32(3200.0f * (BaroGroundTempScale * (1.0f - expf(PressScale))), BaroSpikeTab32); // Result in cm * 32
         BaroSum = BaroSpikeTab32[2] + lastspike32 + lastlastspike32;
         lastlastspike32 = lastspike32;
@@ -405,12 +408,6 @@ void Baro_update(void)                                            // Note Pressu
             BaroDtUS = LastGeneraltime - LastDataOutPut;          // We just need the time between reads during init. First read will be off, settleloop fixes that
             LastDataOutPut = LastGeneraltime;
         }
-    }
-    if (state == 2)
-    {
-        state = 0;                                                // Reset statemachine
-        ActualPressure = baro.calculate();                        // ActualPressure needed by mavlink
-        PressScale = 0.190259f * logf(ActualPressure / GroundPressure);// Scale will be way off during initialization, thats why settle buffers is done in IMU
     } else state++;
 }
 #endif
