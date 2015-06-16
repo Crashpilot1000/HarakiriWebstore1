@@ -644,7 +644,7 @@ extern float    EstAlt;
 extern float    AltHold;
 extern float    vario;
 extern int16_t  BaroActualTempC100;
-extern int16_t  BaroGroundTempC100;
+extern float    BaroGroundTempScale;
 extern int16_t  BaroP;
 extern int16_t  BaroI;
 extern int16_t  BaroD;
@@ -690,7 +690,6 @@ extern uint8_t  SonarBreach;                // 0 = Breach unknown, 1 = breached 
 extern uint8_t  SonarLandWanted;            // This is done to virtualize cfg.snr_land because failsafe can disable it and it could be saved in the worst case
 extern float    ActualPressure;
 extern float    GroundPressure;
-extern float    GroundAlt;
 extern int16_t  ESCnoFlyThrottle;
 extern bool     ForceRCExpInit;
 

@@ -363,16 +363,15 @@ Benchtests suggest it is working better than this:
 FiveElementSpikeFilterINT32(3200.0f * ((1.0f - powf(ActualPressure / GroundPressure, AbsAltExponent)) * BaroTempCorMeter), BaroSpikeTab32); // Result in cm * 32
 In flight tests need to be done to judge upon an improvement.
 */
-#define BaroHeatLPF 0.7f
+#define BaroHeatLPF 0.999f
 void Baro_update(void)                                            // Note Pressure is now global for telemetry 1hPa = 1mBar
 {
     static int32_t  BaroSpikeTab32[5], lastlastspike32 = 0;       // Note: We don't care about runup bufferstate since first 50 runs are discarded anyway
     static uint32_t LastGeneraltime, LastDataOutPut = 0;
-    static float    TempFact = 0.0f, Scale;                       // Used to spread cpu intensive calculation across runs
+    static float    PressScale;                                   // Used to spread cpu intensive calculation across runs
     static uint16_t baroDeadline = 0;
     static uint8_t  state = 0;
     int32_t lastspike32, BaroSum;
-    float temp;
   
     if (micros() - LastGeneraltime < baroDeadline) return;        // Make it rollover friendly
     switch (state)                                                // Statemachine just to schedule Baro I2C actions
@@ -395,7 +394,7 @@ void Baro_update(void)                                            // Note Pressu
     if (state == 0)                                               // We piece stuff together from the previous runs here. Will be way off in iniphase.
     {
         lastspike32 = BaroSpikeTab32[2];                          // Save lastval from spiketab
-        FiveElementSpikeFilterINT32(3200.0f * (TempFact * (1.0f - expf(Scale))), BaroSpikeTab32); // Result in cm * 32
+        FiveElementSpikeFilterINT32(3200.0f * (BaroGroundTempScale * (1.0f - expf(PressScale))), BaroSpikeTab32); // Result in cm * 32
         BaroSum = BaroSpikeTab32[2] + lastspike32 + lastlastspike32;
         lastlastspike32 = lastspike32;
         BaroAlt = (float)BaroSum * ((1.0f / 32.0f) / 3.0f);
@@ -406,17 +405,11 @@ void Baro_update(void)                                            // Note Pressu
             LastDataOutPut = LastGeneraltime;
         }
     }
-    if (state == 1 && BaroGroundTempC100)                         // We need a GroundTemperature. Theoretically Baro could report Temp of 0,00 Degree, but very unlikely.
-    {
-        temp = (int32_t)BaroActualTempC100 + (int32_t)BaroGroundTempC100 + 2 * 27315; // temp has 2 times Kelvin times 100
-        if (!TempFact) TempFact = temp * ((153.8462f / 100.0f) / 2.0f); // 153,8462 * Kelvin
-        else TempFact = TempFact * BaroHeatLPF + temp * (((153.8462f / 100.0f) / 2.0f) * (1.0f - BaroHeatLPF)); // 153,8462 * Kelvin * 0,x for LPF
-    }
     if (state == 2)
     {
         state = 0;                                                // Reset statemachine
         ActualPressure = baro.calculate();                        // ActualPressure needed by mavlink
-        Scale = 0.190259f * logf(ActualPressure / GroundPressure);// Scale will be way off during initialization, thats why settle buffers is done in IMU
+        PressScale = 0.190259f * logf(ActualPressure / GroundPressure);// Scale will be way off during initialization, thats why settle buffers is done in IMU
     } else state++;
 }
 #endif

@@ -43,9 +43,8 @@ uint8_t  SonarBreach = 0;                                            // 0 = Brea
 uint8_t  SonarLandWanted = 0;                                        // This is done to virtualize cfg.snr_land because failsafe can disable it and it could be saved in the worst case
 float    ActualPressure;
 float    GroundPressure = 1;                                         // Must be 1 to avoid div by zero // 101325.0f; MSL Pascal
-float    GroundAlt;
 int16_t  BaroActualTempC100;
-int16_t  BaroGroundTempC100 = 0;                                     // Needs to be zero here
+float    BaroGroundTempScale;
 int16_t  ESCnoFlyThrottle;
 static   uint8_t GoodRCcnt;                                          // Number of good consecutive Signals before arming
 static   int16_t FSBaroThrottle = 0;

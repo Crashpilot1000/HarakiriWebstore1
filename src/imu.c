@@ -165,7 +165,7 @@ void getEstimatedAltitude(void)
 {
     static int8_t   VarioTab[VarioTabsize];
     static uint8_t  Vidx = 0, IniStep = 0, IniCnt = 0;
-    static float    AvgHzVarioCorrector = 0.0f, LastEstAltBaro = 0.0f, SNRcorrect, SNRavg = 0.0f;
+    static float    AvgHzVarioCorrector = 0.0f, LastEstAltBaro, SNRcorrect, SNRavg = 0.0f, GroundAltOffset = 0.0f;
     float           NewVal, EstAltBaro;
     uint8_t         i;
     int32_t         NewVarioVal, VarioSum;
@@ -182,19 +182,20 @@ void getEstimatedAltitude(void)
                 if(IniCnt == 40)                                              // Waste Cycles to let things settle
                 {
                     memset(VarioTab, 0, sizeof(VarioTab));
-                    EstAlt = GroundAlt = vario = 0;
-                    GroundPressure     = ActualPressure;
-                    BaroGroundTempC100 = BaroActualTempC100;                  // No averaging needed here
+                    EstAlt = vario = BaroGroundTempScale = 0.0f;              // Zero global vars
+                    GroundPressure = ActualPressure;                          // GroundPressure can't be zero, would cause DIV BY ZERO in sensors.c
                     IniCnt = 0;
                     IniStep++;
                 }
                 break;
-            case 1:                                                           // Get Groundpressure
+            case 1:                                                           // Get Groundpressure and Temperatur Scale
                 IniCnt++;
-                GroundPressure += ActualPressure;
-                if (IniCnt == 9)
+                GroundPressure      += ActualPressure;
+                BaroGroundTempScale += (float)((int32_t)BaroActualTempC100 + 27315) * (153.8462f / 100.0f);
+                if (IniCnt == 10)
                 {
-                    GroundPressure *= 0.1f;
+                    GroundPressure      /= 11.0f;                             // GroundPressure was preloaded, so one more..
+                    BaroGroundTempScale /= 10.0f;
                     IniCnt = 0;
                     IniStep++;
                 }
@@ -209,13 +210,14 @@ void getEstimatedAltitude(void)
                 break;
             case 3:
                 IniCnt++;
-                GroundAlt           += BaroAlt;
+                GroundAltOffset     += BaroAlt;
                 AvgHzVarioCorrector += 1000000.0f / BaroDtUS;                 // Note: BaroDtUS can't be zero since it is initialized in the settle loop.
                 if (IniCnt == 50)                                             // Gather 50 values
                 {
-                    GroundAlt  *= 0.02f;
+                    GroundAltOffset *= 0.02f;
                     SonarStatus = 0;
                     AvgHzVarioCorrector *= 0.02f / (float)(VarioTabsize + 1);
+                    LastEstAltBaro = BaroAlt - GroundAltOffset;               // Suppress initial spike in GUI
                     GroundAltInitialized = true;
                 }
                 break;
@@ -240,7 +242,7 @@ void getEstimatedAltitude(void)
                 SNRavg  = NewVal;
             }
             else SNRavg += 0.2f * (NewVal - SNRavg);                          // Adjust Average during accepttimer (ca. 550ms so ca. 20 cycles)
-            SNRcorrect = EstAlt + GroundAlt - SNRavg;                         // Calculate baro/sonar displacement on 1st contact
+            SNRcorrect = EstAlt + GroundAltOffset - SNRavg;                   // Calculate baro/sonar displacement on 1st contact
             break;
         case 2:
             if (newbaroalt) BaroAlt = (SNRcorrect + NewVal) * cfg.snr_cf + BaroAlt * (1 - cfg.snr_cf); // Set weight / make transition smoother
@@ -252,7 +254,7 @@ void getEstimatedAltitude(void)
     if (newbaroalt)
     {
         newbaroalt     = false;                                               // Reset Newbarovalue since it's iterative and not interrupt driven it's OK
-        EstAltBaro     = BaroAlt - GroundAlt;
+        EstAltBaro     = BaroAlt - GroundAltOffset;
         NewVarioVal    = constrain_int(EstAltBaro - LastEstAltBaro, -127, 127);
         LastEstAltBaro = EstAltBaro;
         VarioSum       = NewVarioVal;
