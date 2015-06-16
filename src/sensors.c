@@ -356,14 +356,15 @@ Some Notes: I read out baro temperature every time because a sustained datarate 
 Barometic formula taken from "calcSHABarASLAlt(..)" https://gentlenav.googlecode.com/svn-history/r3598/branches/MatrixPilot_DB_Breeze/MatrixPilot/barometerCntrl.c
 There you can read: "This is using a super high accuracy barometric altitude computation, technicaly, +-1.5 M of the standard
 atmosphere tables in the troposphere (up to 11,000 m amsl)" There is no info how the "magic numbers" were gathered.
-The calculation of the formula is split up in 3 parts and spread around the tasks ("state") to avoid CPU spikes.
+The implementation here does not constantly calculate a new temperature correction factor because doing that only once on startup
+gives me the better results - that maybe because of the pressure / temperature correction already done in the Baro - driver.
+The calculation of the formula is split up in 2 parts and spread around the tasks ("state") to avoid CPU spikes.
 Benchtests suggest it is working better than this:
 #define AbsAltExponent   0.1902612003f                            // More precise number by using less rounding on physical constants
 #define BaroTempCorMeter 44330.7692307692f                        // Let compiler wrap this to float. Was 44330 before.
 FiveElementSpikeFilterINT32(3200.0f * ((1.0f - powf(ActualPressure / GroundPressure, AbsAltExponent)) * BaroTempCorMeter), BaroSpikeTab32); // Result in cm * 32
 In flight tests need to be done to judge upon an improvement.
 */
-#define BaroHeatLPF 0.999f
 void Baro_update(void)                                            // Note Pressure is now global for telemetry 1hPa = 1mBar
 {
     static int32_t  BaroSpikeTab32[5], lastlastspike32 = 0;       // Note: We don't care about runup bufferstate since first 50 runs are discarded anyway
