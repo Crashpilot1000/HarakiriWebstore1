@@ -164,7 +164,7 @@ void computeIMU(void)
 void getEstimatedAltitude(void)
 {
     static int8_t   VarioTab[VarioTabsize];
-    static uint8_t  Vidx = 0, IniStep = 0, IniCnt = 0;
+    static uint8_t  Vidx = 0, IniStep = 0;
     static float    AvgHzVarioCorrector = 0.0f, LastEstAltBaro, SNRcorrect, SNRavg = 0.0f, GroundAltOffset = 0.0f;
     float           NewVal, EstAltBaro;
     uint8_t         i;
@@ -175,52 +175,36 @@ void getEstimatedAltitude(void)
         if (newbaroalt)
         {
             newbaroalt = false;                                               // Reset Newbarovalue since it's iterative and not interrupt driven it's OK
-            switch(IniStep)                                                   // Casemachine here for further extension
+            IniStep++;
+            if(IniStep == 40)                                                 // Waste Baro-Cycles to let it settle
             {
-            case 0:
-                IniCnt++;
-                if(IniCnt == 40)                                              // Waste Cycles to let things settle
-                {
-                    memset(VarioTab, 0, sizeof(VarioTab));
-                    EstAlt = vario = BaroGroundTempScale = 0.0f;              // Zero global vars
-                    GroundPressure = ActualPressure;                          // GroundPressure can't be zero, would cause DIV BY ZERO in sensors.c
-                    IniCnt = 0;
-                    IniStep++;
-                }
-                break;
-            case 1:                                                           // Get Groundpressure and Temperatur Scale
-                IniCnt++;
+                memset(VarioTab, 0, sizeof(VarioTab));                        // Clear Variotab
+                EstAlt = vario = BaroGroundTempScale = 0.0f;                  // Zero global vars
+                GroundPressure = ActualPressure;                              // GroundPressure can't be zero, would cause DIV BY ZERO in sensors.c
+            }
+            if (IniStep > 40 && IniStep <= 50)
+            {
                 GroundPressure      += ActualPressure;
                 BaroGroundTempScale += (float)((int32_t)BaroActualTempC100 + 27315) * (153.8462f / 100.0f);
-                if (IniCnt == 10)
-                {
-                    GroundPressure      /= 11.0f;                             // GroundPressure was preloaded, so one more..
-                    BaroGroundTempScale /= 10.0f;
-                    IniCnt = 0;
-                    IniStep++;
-                }
-                break;
-            case 2:                                                           // Let Filters settle for 10 runs
-                IniCnt++;
-                if (IniCnt == 10)
-                {
-                    IniCnt = 0;
-                    IniStep++;
-                }
-                break;
-            case 3:
-                IniCnt++;
+            }
+            if (IniStep == 50)
+            {
+                GroundPressure      /= 11.0f;                                 // GroundPressure was preloaded, so one more..
+                BaroGroundTempScale /= 10.0f;
+            }
+            if (IniStep > 60 && IniStep <= 110)                               // Let Filters settle for 10 runs then 50 avg runs
+            {
                 GroundAltOffset     += BaroAlt;
                 AvgHzVarioCorrector += 1000000.0f / BaroDtUS;                 // Note: BaroDtUS can't be zero since it is initialized in the settle loop.
-                if (IniCnt == 50)                                             // Gather 50 values
-                {
-                    GroundAltOffset *= 0.02f;
-                    SonarStatus = 0;
-                    AvgHzVarioCorrector *= 0.02f / (float)(VarioTabsize + 1);
-                    LastEstAltBaro = BaroAlt - GroundAltOffset;               // Suppress initial spike in GUI
-                    GroundAltInitialized = true;
-                }
-                break;
+            }
+            if (IniStep == 110)
+            {
+                GroundAltOffset     *= 0.02f;                                 // This can only be a few centimeters because using GroundPressure for alt-calculation already zeroes out..
+                AvgHzVarioCorrector *= 0.02f / (float)(VarioTabsize + 1);
+                LastEstAltBaro       = BaroAlt - GroundAltOffset;             // Suppress initial spike in GUI
+                SonarStatus          = 0;
+                IniStep              = 0;                                     // This step may be omitted
+                GroundAltInitialized = true;
             }
         }
         return;
@@ -258,7 +242,7 @@ void getEstimatedAltitude(void)
         NewVarioVal    = constrain_int(EstAltBaro - LastEstAltBaro, -127, 127);
         LastEstAltBaro = EstAltBaro;
         VarioSum       = NewVarioVal;
-        for (i = 0; i < VarioTabsize; i++) VarioSum += VarioTab[i];
+        for (i = 0; i < VarioTabsize; i++) VarioSum += VarioTab[i];           // Ringbuffer requires more "static" declarations
         VarioTab[Vidx] = NewVarioVal;                                         // is constrained to symetric int8_t range
         Vidx++;
         if (Vidx == VarioTabsize) Vidx = 0;

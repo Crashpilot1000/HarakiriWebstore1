@@ -355,15 +355,14 @@ BMP085: 32.9 Hz
 Some Notes: I read out baro temperature every time because a sustained datarate is better than having jitter data at a little higher rate.
 Barometic formula taken from "calcSHABarASLAlt(..)" https://gentlenav.googlecode.com/svn-history/r3598/branches/MatrixPilot_DB_Breeze/MatrixPilot/barometerCntrl.c
 There you can read: "This is using a super high accuracy barometric altitude computation, technicaly, +-1.5 M of the standard
-atmosphere tables in the troposphere (up to 11,000 m amsl)" There is no info how the "magic numbers" were gathered.
-The implementation here does not constantly calculate a new temperature correction factor because doing that only once on startup
-gives me the better results - that maybe because of the pressure / temperature correction already done in the Baro - driver.
+atmosphere tables in the troposphere (up to 11,000 m amsl)". The implementation here does not constantly calculate a new temperature correction factor
+because doing that only once on startup gives me the better results - that maybe because of the pressure / temperature correction already done in the Baro - driver.
+The calculation of that temperature correction factor is IMHO the key why it works better than using a fixed number ("BaroTempCorMeter").
 The calculation of the formula is not split up because the use of logf() and expf() together is 9,8 times FASTER than a single powf() instruction (measured on naze).
-Benchtests suggest it is working better than this (and 9,8 times faster..):
+Benchtests suggest it is working better and 9,8 times faster than this:
 #define AbsAltExponent   0.1902612003f                            // More precise number by using less rounding on physical constants
 #define BaroTempCorMeter 44330.7692307692f                        // Let compiler wrap this to float. Was 44330 before.
 FiveElementSpikeFilterINT32(3200.0f * ((1.0f - powf(ActualPressure / GroundPressure, AbsAltExponent)) * BaroTempCorMeter), BaroSpikeTab32); // Result in cm * 32
-In flight tests need to be done to judge upon an improvement.
 */
 void Baro_update(void)                                            // Note Pressure is now global for telemetry 1hPa = 1mBar
 {
@@ -395,7 +394,7 @@ void Baro_update(void)                                            // Note Pressu
     if (state == 2)
     {
         state = 0;                                                // Reset statemachine
-        ActualPressure = baro.calculate();                        // ActualPressure needed by mavlink. Unit: Pa (Pascal) note: 100Pa = 1hPa =  1mbar
+        ActualPressure = baro.calculate();                        // ActualPressure needed by mavlink. Unit: Pa (Pascal). Note: 100Pa = 1hPa = 1mbar
         lastspike32 = BaroSpikeTab32[2];                          // Save lastval from spiketab
         PressScale = 0.190259f * logf(ActualPressure / GroundPressure);// Scale will be way off during initialization, thats why settle buffers is done in IMU
         FiveElementSpikeFilterINT32(3200.0f * (BaroGroundTempScale * (1.0f - expf(PressScale))), BaroSpikeTab32); // Result in cm * 32
@@ -426,7 +425,7 @@ void Sonar_update(void)
     {
         sonarAlt = newdata;
         tilt = 100 - constrain_int((int32_t)(TiltValue * 100.0f), 0, 100); // We don't care for upsidedownstuff, because althold is disabled than anyway
-        if (cfg.snr_dbg) { debug[1] = tilt; debug[2] = sonarAlt; }  // Give raw tilt & sonar in debugmode
+        if (cfg.snr_dbg) { debug[1] = tilt; debug[2] = sonarAlt; }// Give raw tilt & sonar in debugmode
         if (sonarAlt >= cfg.snr_min && sonarAlt <= cfg.snr_max && tilt < cfg.snr_tilt)
         {
             LastGoodSonarAlt = sonarAlt;
