@@ -366,12 +366,12 @@ FiveElementSpikeFilterINT32(3200.0f * ((1.0f - powf(ActualPressure / GroundPress
 */
 void Baro_update(void)                                            // Note Pressure is now global for telemetry 1hPa = 1mBar
 {
-    static int32_t  BaroSpikeTab32[5], lastlastspike32 = 0;       // Note: We don't care about runup bufferstate since first 50 runs are discarded anyway
-    static uint32_t LastGeneraltime, LastDataOutPut = 0;
+    static int32_t  BaroSpikeTab32[5], lastlastspike32;           // Note: We don't care about runup bufferstate since first 50 runs are discarded anyway
+    static uint32_t LastGeneraltime, LastDataOutPut;
     static uint16_t baroDeadline = 0;
     static uint8_t  state = 0;
     float   PressScale;
-    int32_t lastspike32, BaroSum;
+    int32_t lastspike32, BaroSum, i;
   
     if (micros() - LastGeneraltime < baroDeadline) return;        // Make it rollover friendly
     switch (state)                                                // Statemachine just to schedule Baro I2C actions
@@ -396,16 +396,18 @@ void Baro_update(void)                                            // Note Pressu
         state = 0;                                                // Reset statemachine
         ActualPressure = baro.calculate();                        // ActualPressure needed by mavlink. Unit: Pa (Pascal). Note: 100Pa = 1hPa = 1mbar
         lastspike32 = BaroSpikeTab32[2];                          // Save lastval from spiketab
-        PressScale = 0.190259f * logf(ActualPressure / GroundPressure);// Scale will be way off during initialization, thats why settle buffers is done in IMU
+        PressScale = 0.190259f * logf(ActualPressure / GroundPressure);// Scale will be way off during initialization, thats why we zero out below
         FiveElementSpikeFilterINT32(3200.0f * (BaroGroundTempScale * (1.0f - expf(PressScale))), BaroSpikeTab32); // Result in cm * 32
         BaroSum = BaroSpikeTab32[2] + lastspike32 + lastlastspike32;
         lastlastspike32 = lastspike32;
         BaroAlt = (float)BaroSum * ((1.0f / 32.0f) / 3.0f);
-        newbaroalt = true;
+        Newbaroalt = true;
         if (!GroundAltInitialized)
         {
             BaroDtUS = LastGeneraltime - LastDataOutPut;          // We just need the time between reads during init. First read will be off, settleloop fixes that
             LastDataOutPut = LastGeneraltime;
+            for (i = 0; i < 5; i++) BaroSpikeTab32[i] = 0;        // Zero out during ini
+            lastlastspike32 = 0;
         }
     } else state++;
 }
@@ -416,11 +418,12 @@ void Baro_update(void)                                            // Note Pressu
 void Sonar_update(void)
 {
     static  int16_t  LastGoodSonarAlt = -1;                       // Initialize with errorvalue
-    static  uint32_t AcceptTimer = 0;
+    static  uint32_t AcceptTimer;
     static  uint8_t  Errorcnt = 0;                                // This is compared to SonarErrorLimit
     int16_t LastSonarAlt = sonarAlt;                              // Save Last Alt here for comparison
     uint8_t tilt;
     int32_t newdata = GetSnr();                                   // Keep it running for disconnect detection
+    if (!GroundAltInitialized) return;                            // Don't do Sonar until Baro initialized
     if (newdata)                                                  // 100 ms with Maxbotix, 60ms with HC-SR04
     {
         sonarAlt = newdata;

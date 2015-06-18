@@ -648,7 +648,7 @@ extern float    BaroGroundTempScale;
 extern int16_t  BaroP;
 extern int16_t  BaroI;
 extern int16_t  BaroD;
-extern bool     newbaroalt;
+extern bool     Newbaroalt;
 extern bool     GroundAltInitialized;
 extern uint16_t BaroDtUS;
 

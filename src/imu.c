@@ -5,7 +5,7 @@ float   accSmooth[3], ACC_speed[2] = { 0, 0 }, accADC[3], gyroADC[3], magADCfloa
 float   BaroAlt, EstAlt, AltHold, vario;
 int32_t sonarAlt;
 int16_t BaroP, BaroI, BaroD;
-bool    newbaroalt = false, GroundAltInitialized = false;
+bool    Newbaroalt = false, GroundAltInitialized = false;
 uint16_t BaroDtUS = 0;
 
 // **************
@@ -165,16 +165,16 @@ void getEstimatedAltitude(void)
 {
     static int8_t   VarioTab[VarioTabsize];
     static uint8_t  Vidx = 0, IniStep = 0;
-    static float    AvgHzVarioCorrector = 0.0f, LastEstAltBaro, SNRcorrect, SNRavg = 0.0f, GroundAltOffset = 0.0f;
-    float           NewVal, EstAltBaro;
+    static float    AvgHzVarioCorrector = 0.0f, LastEstAltBaro = 0.0f, SNRcorrect, SNRavg = 0.0f;
+    float           NewVal;
     uint8_t         i;
     int32_t         NewVarioVal, VarioSum;
 
     if (!GroundAltInitialized)                                                // The first runs go here
     {
-        if (newbaroalt)
+        if (Newbaroalt)
         {
-            newbaroalt = false;                                               // Reset Newbarovalue since it's iterative and not interrupt driven it's OK
+            Newbaroalt = false;                                               // Reset Newbarovalue since it's iterative and not interrupt driven it's OK
             IniStep++;
             if(IniStep == 40)                                                 // Waste Baro-Cycles to let it settle
             {
@@ -182,28 +182,19 @@ void getEstimatedAltitude(void)
                 EstAlt = vario = BaroGroundTempScale = 0.0f;                  // Zero global vars
                 GroundPressure = ActualPressure;                              // GroundPressure can't be zero, would cause DIV BY ZERO in sensors.c
             }
-            if (IniStep > 40 && IniStep <= 50)
+            if (IniStep > 40 && IniStep <= 60)
             {
+                AvgHzVarioCorrector += 1000000.0f / BaroDtUS;                 // Note: BaroDtUS can't be zero since it is initialized in the settle loop.
                 GroundPressure      += ActualPressure;
                 BaroGroundTempScale += (float)((int32_t)BaroActualTempC100 + 27315) * (153.8462f / 100.0f);
             }
-            if (IniStep == 50)
+            if (IniStep == 60)
             {
-                GroundPressure      /= 11.0f;                                 // GroundPressure was preloaded, so one more..
-                BaroGroundTempScale /= 10.0f;
-            }
-            if (IniStep > 60 && IniStep <= 110)                               // Let Filters settle for 10 runs then 50 avg runs
-            {
-                GroundAltOffset     += BaroAlt;
-                AvgHzVarioCorrector += 1000000.0f / BaroDtUS;                 // Note: BaroDtUS can't be zero since it is initialized in the settle loop.
-            }
-            if (IniStep == 110)
-            {
-                GroundAltOffset     *= 0.02f;                                 // This can only be a few centimeters because using GroundPressure for alt-calculation already zeroes out..
-                AvgHzVarioCorrector *= 0.02f / (float)(VarioTabsize + 1);
-                LastEstAltBaro       = BaroAlt - GroundAltOffset;             // Suppress initial spike in GUI
+                AvgHzVarioCorrector *= 0.05f / (float)(VarioTabsize + 1);
+                GroundPressure      /= 21.0f;                                 // GroundPressure was preloaded, so one more. Also zeroes out Altitude by definition.
+                BaroGroundTempScale /= 20.0f;
                 SonarStatus          = 0;
-                IniStep              = 0;                                     // This step may be omitted
+                IniStep              = 0;                                     // Left here to be sure.
                 GroundAltInitialized = true;
             }
         }
@@ -226,21 +217,20 @@ void getEstimatedAltitude(void)
                 SNRavg  = NewVal;
             }
             else SNRavg += 0.2f * (NewVal - SNRavg);                          // Adjust Average during accepttimer (ca. 550ms so ca. 20 cycles)
-            SNRcorrect = EstAlt + GroundAltOffset - SNRavg;                   // Calculate baro/sonar displacement on 1st contact
+            SNRcorrect = EstAlt - SNRavg;                                     // Calculate baro/sonar displacement on 1st contact
             break;
         case 2:
-            if (newbaroalt) BaroAlt = (SNRcorrect + NewVal) * cfg.snr_cf + BaroAlt * (1 - cfg.snr_cf); // Set weight / make transition smoother
+            if (Newbaroalt) BaroAlt = (SNRcorrect + NewVal) * cfg.snr_cf + BaroAlt * (1 - cfg.snr_cf); // Set weight / make transition smoother
             break;
         }
     }
 
     EstAlt += vario * ACCDeltaTimeINS;
-    if (newbaroalt)
+    if (Newbaroalt)
     {
-        newbaroalt     = false;                                               // Reset Newbarovalue since it's iterative and not interrupt driven it's OK
-        EstAltBaro     = BaroAlt - GroundAltOffset;
-        NewVarioVal    = constrain_int(EstAltBaro - LastEstAltBaro, -127, 127);
-        LastEstAltBaro = EstAltBaro;
+        Newbaroalt     = false;                                               // Reset Newbarovalue since it's iterative and not interrupt driven it's OK
+        NewVarioVal    = constrain_int(BaroAlt - LastEstAltBaro, -127, 127);
+        LastEstAltBaro = BaroAlt;
         VarioSum       = NewVarioVal;
         for (i = 0; i < VarioTabsize; i++) VarioSum += VarioTab[i];           // Ringbuffer requires more "static" declarations
         VarioTab[Vidx] = NewVarioVal;                                         // is constrained to symetric int8_t range
@@ -248,12 +238,12 @@ void getEstimatedAltitude(void)
         if (Vidx == VarioTabsize) Vidx = 0;
 
         NewVal = (float)VarioSum * AvgHzVarioCorrector;
-        vario  = vario  * cfg.accz_vcf + NewVal     * (1.0f - cfg.accz_vcf);
-        EstAlt = EstAlt * cfg.accz_acf + EstAltBaro * (1.0f - cfg.accz_acf);
+        vario  = vario  * cfg.accz_vcf + NewVal  * (1.0f - cfg.accz_vcf);
+        EstAlt = EstAlt * cfg.accz_acf + BaroAlt * (1.0f - cfg.accz_acf);
         if (cfg.bar_dbg)
         {
-            debug[0] = EstAltBaro * 10;
-            debug[1] = EstAlt     * 10;
+            debug[0] = BaroAlt * 10;
+            debug[1] = EstAlt  * 10;
             debug[2] = NewVal;
             debug[3] = vario;
         }
