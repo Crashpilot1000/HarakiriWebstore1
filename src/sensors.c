@@ -406,7 +406,7 @@ void Baro_update(void)                                            // Note Pressu
         {
             BaroDtUS = LastGeneraltime - LastDataOutPut;          // We just need the time between reads during init. First read will be off, settleloop fixes that
             LastDataOutPut = LastGeneraltime;
-            for (i = 0; i < 5; i++) BaroSpikeTab32[i] = 0;        // Zero out during ini
+            for (i = 0; i < 5; i++) BaroSpikeTab32[i] = 0;        // Zero out during ini. No need to do it better, just more EEPROM and Stack waste.
             lastlastspike32 = 0;
         }
     } else state++;

@@ -161,6 +161,8 @@ void computeIMU(void)
 //Crashpilot1000 Mod getEstimatedAltitude ACC//
 ///////////////////////////////////////////////
 #define VarioTabsize 7
+#define BaroWasteCycles 40
+#define BaroAvgCycles 20
 void getEstimatedAltitude(void)
 {
     static int8_t   VarioTab[VarioTabsize];
@@ -176,23 +178,23 @@ void getEstimatedAltitude(void)
         {
             Newbaroalt = false;                                               // Reset Newbarovalue since it's iterative and not interrupt driven it's OK
             IniStep++;
-            if(IniStep == 40)                                                 // Waste Baro-Cycles to let it settle
+            if (IniStep == BaroWasteCycles)                                   // Waste Baro-Cycles to let it settle
             {
                 memset(VarioTab, 0, sizeof(VarioTab));                        // Clear Variotab
                 EstAlt = vario = BaroGroundTempScale = 0.0f;                  // Zero global vars
                 GroundPressure = ActualPressure;                              // GroundPressure can't be zero, would cause DIV BY ZERO in sensors.c
             }
-            if (IniStep > 40 && IniStep <= 60)
+            if (IniStep > BaroWasteCycles && IniStep <= (BaroWasteCycles + BaroAvgCycles))
             {
                 AvgHzVarioCorrector += 1000000.0f / BaroDtUS;                 // Note: BaroDtUS can't be zero since it is initialized in the settle loop.
                 GroundPressure      += ActualPressure;
                 BaroGroundTempScale += (float)((int32_t)BaroActualTempC100 + 27315) * (153.8462f / 100.0f);
             }
-            if (IniStep == 60)
+            if (IniStep == (BaroWasteCycles + BaroAvgCycles))
             {
-                AvgHzVarioCorrector *= 0.05f / (float)(VarioTabsize + 1);
-                GroundPressure      /= 21.0f;                                 // GroundPressure was preloaded, so one more. Also zeroes out Altitude by definition.
-                BaroGroundTempScale /= 20.0f;
+                AvgHzVarioCorrector /= (float)(BaroAvgCycles * (VarioTabsize + 1));
+                GroundPressure      /= (float)(BaroAvgCycles + 1);            // GroundPressure was preloaded, so one more. Also zeroes out Altitude by definition.
+                BaroGroundTempScale /= (float)BaroAvgCycles;
                 SonarStatus          = 0;
                 IniStep              = 0;                                     // Left here to be sure.
                 GroundAltInitialized = true;
