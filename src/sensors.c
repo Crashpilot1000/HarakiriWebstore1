@@ -3,9 +3,8 @@
 
 bool   calibratingA = false;                                      // ACC cal
 bool   calibratingM = false;                                      // Magnetometer
-
 float  MainDptCut;
-float  filterPIrp, filterPIyw;
+float  filterGYrp, filterGYyw;
 bool   MpuSpecial;
 extern uint16_t batteryWarningVoltage;
 extern uint8_t  batteryCellCount;
@@ -114,8 +113,8 @@ retry:
     SonarLandWanted = cfg.snr_land;                               // Variable may be overwritten by failsave
 #endif
     MainDptCut = RCconstPI / (float)cfg.maincuthz;                // Initialize Cut off frequencies for mainpid D
-		filterPIrp = (float)(100 - cfg.flt_rp) * 0.1f;
-		filterPIyw = (float)(100 - cfg.flt_yw) * 0.1f;
+    filterGYrp = (float)(100 - cfg.flt_rp) * 0.1f;
+    filterGYyw = (float)(100 - cfg.flt_yw) * 0.1f;
 }
 
 uint16_t batteryAdcToVoltage(uint16_t src)
@@ -366,7 +365,7 @@ FiveElementSpikeFilterINT32(3200.0f * ((1.0f - powf(ActualPressure / GroundPress
 */
 void Baro_update(void)                                            // Note Pressure is now global for telemetry 1hPa = 1mBar
 {
-    static int32_t  BaroSpikeTab32[5], lastlastspike32;           // Note: We don't care about runup bufferstate since first 50 runs are discarded anyway
+    static int32_t  BaroSpikeTab32[5], lastlastspike32;           // Note: We don't care about runup bufferstate.
     static uint32_t LastGeneraltime, LastDataOutPut;
     static uint16_t baroDeadline = 0;
     static uint8_t  state = 0;

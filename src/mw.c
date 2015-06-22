@@ -175,7 +175,7 @@ void pass(void)                                                             // F
 void loop(void)
 {
     static uint32_t RTLGeneralTimer, AltRCTimer0 = 0, BaroAutoTimer, loopTime;
-    static float    lastGyro[2] = {0.0f, 0.0f}, lastDTerm[2] = {0.0f, 0.0f}, lastPITerm[3] = {0.0f, 0.0f, 0.0f};
+    static float    lastGyro[2] = {0, 0}, lastDTerm[2] = {0, 0}, LastGyFilt[3] = {0, 0, 0};
     float           RCfactor, rcCommandAxis;
     float           PTerm = 0, ITerm = 0, DTerm = 0, PTermACC = 0, ITermACC = 0, ITermGYRO = 0, error = 0, prop = 0;
     static uint8_t  ThrFstTimeCenter = 0, AutolandState = 0, AutostartState = 0, HoverThrcnt, RTLstate, ReduceBaroI = 0;
@@ -186,8 +186,8 @@ void loop(void)
     static int16_t  AutostartClimbrate;
     static int32_t  FilterVario, AutostartTargetHight, AutostartFilterAlt;
     static stdev_t  variovariance;
-    float           tmp0flt;
-    int32_t         tmp0, PTermYW, ITermYW, gyroYwDiv4, errorYW, cTimeLessJitter;
+    float           tmp0flt, actualfiltergyroRP;
+    int32_t         tmp0, PTermYW, ITermYW, actualfiltergyroYW, errorYW, cTimeLessJitter, gyrorough;
     int16_t         thrdiff;
     uint8_t         axis;
 
@@ -784,21 +784,28 @@ void loop(void)
 
         RCfactor        = ACCDeltaTimeINS / (MainDptCut + ACCDeltaTimeINS);     // For Dterm
         cTimeLessJitter = (uint16_t)FLOATcycleTime & (uint16_t)0xFFFC;          // Filter last 2 bit jitter for YAW
-        gyroYwDiv4      = gyroADC[YAW];
-        gyroYwDiv4    >>= 2;                                                    // Less Gyrojitter works actually better
-
+/*
+        YAW
+*/
+        if (cfg.flt_yw)                                                         // Gyro Filtering
+        {
+            actualfiltergyroYW = (filterGYyw * gyroADC[YAW] + LastGyFilt[YAW]) * 0.25f / (1.0f + filterGYyw);
+            LastGyFilt[YAW]    = gyroADC[YAW];
+        }
+        else actualfiltergyroYW = (int32_t)gyroADC[YAW] >> 2;                   // Less Gyrojitter works actually better
+        
         if (cfg.rc_oldyw)                                                       // [0/1] 0 = multiwii 2.3 yaw, 1 = older yaw
         {
             tmp0    = ((int32_t)cfg.P8[YAW] * (100 - (int32_t)cfg.yawRate * abs_int((int32_t)rcCommand[YAW]) / 500)) / 100;
-            PTermYW = rcCommand[YAW] - ((gyroYwDiv4 * tmp0) / 80);
-            if ((abs_int(gyroYwDiv4) > 640) || ((abs_int((int32_t)rcCommand[YAW]) + cfg.rc_dbyw) > 100))
+            PTermYW = rcCommand[YAW] - ((actualfiltergyroYW * tmp0) / 80);
+            if ((abs_int(actualfiltergyroYW) > 640) || ((abs_int((int32_t)rcCommand[YAW]) + cfg.rc_dbyw) > 100))
             {
                 errorGyroI_YW = 0;
                 ITermYW       = 0;
             }
             else
             {
-                errorYW       = ((int32_t)rcCommand[YAW] * 80 / (int32_t)cfg.P8[YAW]) - gyroYwDiv4;
+                errorYW       = ((int32_t)rcCommand[YAW] * 80 / (int32_t)cfg.P8[YAW]) - actualfiltergyroYW;
                 errorGyroI_YW = constrain_int(errorGyroI_YW + ((errorYW * cTimeLessJitter) / 3000), -16000, +16000); // WindUp & Reference to 3ms looptime
                 ITermYW       = (errorGyroI_YW * (int32_t)cfg.I8[YAW]) / 8000;  // use I term
             }
@@ -806,7 +813,7 @@ void loop(void)
         else
         {
             tmp0    = ((int32_t)rcCommand[YAW] * (((int32_t)cfg.yawRate << 1) + 30)) >> 5;
-            errorYW = tmp0 - gyroYwDiv4;
+            errorYW = tmp0 - actualfiltergyroYW;
             PTermYW = (errorYW * (int32_t)cfg.P8[YAW]) >> 6;
             if ((abs_int(tmp0) > 50) || (cfg.rc_dbyw && rcCommand[YAW]))
             {
@@ -826,21 +833,26 @@ void loop(void)
             if (cfg.D8[YAW]) tmp0 -= (int32_t)cfg.D8[YAW];
             PTermYW = constrain_int(PTermYW, -tmp0, tmp0);
         }
-
-				tmp0flt = PTermYW + ITermYW;;
-        if (cfg.flt_yw)
-        {
-            axisPIDflt[YAW] = (filterPIyw * tmp0flt + lastPITerm[YAW]) / (1.0f + filterPIyw);
-            lastPITerm[YAW] = tmp0flt;
-        }
-        else axisPIDflt[YAW] = tmp0flt;
-
+        axisPIDflt[YAW] = PTermYW + ITermYW;;
         if(f.GTUNE && f.ARMED) calculate_Gtune(false, YAW);
-
-        if(f.HORIZON_MODE) prop = (float)min(max(abs_int((int32_t)rcCommand[PITCH]), abs_int((int32_t)rcCommand[ROLL])), 450) / 450.0f;
+/*
+        ROLL & PITCH
+*/
+        if(f.HORIZON_MODE) prop = (float)min(max(abs_int((int32_t)rcCommand[PITCH]), abs_int((int32_t)rcCommand[ROLL])), 450) * (1.0f / 450.0f);
         for (axis = 0; axis < 2; axis++)
         {
             rcCommandAxis = (float)rcCommand[axis];                             // Calculate common values for pid controllers
+            if (cfg.flt_rp)                                                     // Gyro Filtering
+            {
+                actualfiltergyroRP = (filterGYrp * gyroADC[axis] + LastGyFilt[axis]) / (1.0f + filterGYrp);
+                LastGyFilt[axis]   = gyroADC[axis];
+            }
+            else
+            {
+                gyrorough          = gyroADC[axis] * 0.3125f;                   // This is better than the multiwii div by 4
+                actualfiltergyroRP = (float)gyrorough * 3.2f;
+            }
+          
             if ((f.ANGLE_MODE || f.HORIZON_MODE)) error = constrain_flt(2.0f * rcCommandAxis + GPS_angle[axis], -500.0f, +500.0f) - angle[axis] + cfg.angleTrim[axis];
             switch (cfg.mainpidctrl)
             {
@@ -855,10 +867,10 @@ void loop(void)
                 }
                 if (!f.ANGLE_MODE)
                 {
-                    if (abs_int((int32_t)gyroADC[axis]) > 2560) errorGyroI[axis] = 0.0f;
+                    if (abs_int((int32_t)actualfiltergyroRP) > 2560) errorGyroI[axis] = 0.0f;
                     else
                     {
-                        error            = (rcCommandAxis * 320.0f / (float)cfg.P8[axis]) - gyroADC[axis];
+                        error            = (rcCommandAxis * 320.0f / (float)cfg.P8[axis]) - actualfiltergyroRP;
                         errorGyroI[axis] = constrain_flt(errorGyroI[axis] + error * ACCDeltaTimeINS, -192.0f, +192.0f);
                     }
                     ITermGYRO = errorGyroI[axis] * (float)cfg.I8[axis] * 0.01f;
@@ -878,7 +890,7 @@ void loop(void)
                     PTerm = PTermACC;
                     ITerm = ITermACC;
                 }
-                PTerm -= gyroADC[axis] * dynP8[axis] * 0.003f;
+                PTerm -= actualfiltergyroRP * dynP8[axis] * 0.003f;
                 break;
 // Alternative Controller by alex.khoroshko http://www.multiwii.com/forum/viewtopic.php?f=8&t=3671&start=30#p37465
 // But a little modified...
@@ -889,25 +901,18 @@ void loop(void)
                     if (f.HORIZON_MODE) tmp0flt += ((float)cfg.I8[PIDLEVEL] * error) * 0.16f;
                 }
                 else tmp0flt      = (float)cfg.P8[PIDLEVEL] * error * 0.09f;
-                tmp0flt          -= gyroADC[axis];
+                tmp0flt          -= actualfiltergyroRP;
                 PTerm             = dynP8[axis] * tmp0flt * 0.002f;
                 errorGyroI[axis] += (float)cfg.I8[axis] * tmp0flt * ACCDeltaTimeINS;
                 errorGyroI[axis]  = constrain_flt(errorGyroI[axis], -5500.0f, 5500.0f);// errorGyroI[axis]  = constrain(errorGyroI[axis], -17176.0f, 17176.0f);
                 ITerm             = errorGyroI[axis] * 0.015f;
                 break;
             }                                                                   // End of Switch. Do common Dterm now
-            tmp0flt          = (gyroADC[axis] - lastGyro[axis]) / ACCDeltaTimeINS;
+            tmp0flt          = (gyroADC[axis] - lastGyro[axis]) / ACCDeltaTimeINS;// Do Dterm with raw gyro values -> better result
             lastGyro[axis]   = gyroADC[axis];
             lastDTerm[axis] += RCfactor * (tmp0flt - lastDTerm[axis]);
             DTerm            = lastDTerm[axis] * dynD8[axis] * 0.00007f;
-
-            tmp0flt = PTerm + ITerm;
-            if (cfg.flt_rp)
-            {
-                axisPIDflt[axis] = ((filterPIrp * tmp0flt + lastPITerm[axis]) / (1.0f + filterPIrp)) - DTerm;
-                lastPITerm[axis] = tmp0flt;
-            }
-            else axisPIDflt[axis] = tmp0flt - DTerm;
+            axisPIDflt[axis] = PTerm + ITerm - DTerm;
             if (f.GTUNE && f.ARMED) calculate_Gtune(false, axis);
         }                                                                       // End of for loop for 2 axes (roll and pitch)
 

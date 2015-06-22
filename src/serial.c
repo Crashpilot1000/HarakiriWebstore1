@@ -168,7 +168,7 @@ static void evaluateCommand(void)
     case MSP_SET_PID:
         for (i = 0; i < PIDITEMS; i++)
         {
-            cfg.P8[i] = constrain_int(read8(), 1, 200); // Ensure at least 1 to prevent div by zero in pid controller
+            cfg.P8[i] = max(read8(), 1);                // Ensure at least 1 to prevent div by zero in pid controller
             cfg.I8[i] = read8();
             cfg.D8[i] = read8();
         }

@@ -160,9 +160,10 @@ void computeIMU(void)
 ///////////////////////////////////////////////
 //Crashpilot1000 Mod getEstimatedAltitude ACC//
 ///////////////////////////////////////////////
-#define VarioTabsize 7
+// Note: The "(float)" can be omitted, just here to make it clear when a conversion takes place
+#define VarioTabsize     7
 #define BaroWasteCycles 40
-#define BaroAvgCycles 20
+#define BaroAvgCycles   20
 void getEstimatedAltitude(void)
 {
     static int8_t   VarioTab[VarioTabsize];
