@@ -175,9 +175,9 @@ void pass(void)                                                             // F
 void loop(void)
 {
     static uint32_t RTLGeneralTimer, AltRCTimer0 = 0, BaroAutoTimer, loopTime;
-    static float    lastGyro[2] = {0, 0}, lastDTerm[2] = {0, 0}, LastGyFilt[3] = {0, 0, 0};
+    static float    lastGyro[2] = {0, 0}, lastDTerm[2] = {0, 0}, LastGyFilt[3] = {0, 0, 0}, StickHorizonProp;
     float           RCfactor, rcCommandAxis;
-    float           PTerm = 0, ITerm = 0, DTerm = 0, PTermACC = 0, ITermACC = 0, ITermGYRO = 0, error = 0, prop = 0;
+    float           PTerm = 0, ITerm = 0, DTerm = 0, PTermACC = 0, ITermACC = 0, ITermGYRO = 0, error = 0;
     static uint8_t  ThrFstTimeCenter = 0, AutolandState = 0, AutostartState = 0, HoverThrcnt, RTLstate, ReduceBaroI = 0;
     static int8_t   Althightchange;
     static int32_t  HoverThrottle;
@@ -452,6 +452,8 @@ void loop(void)
             f.HORIZON_MODE = 0;
         }
 
+        if(f.HORIZON_MODE) StickHorizonProp = (float)min(max(abs_int((int32_t)rcCommand[PITCH]), abs_int((int32_t)rcCommand[ROLL])), 450) * (1.0f / 450.0f);
+        
         if (rcOptions[BOXGTUNE])
         {
             if (!f.GTUNE)
@@ -838,7 +840,6 @@ void loop(void)
 /*
         ROLL & PITCH
 */
-        if(f.HORIZON_MODE) prop = (float)min(max(abs_int((int32_t)rcCommand[PITCH]), abs_int((int32_t)rcCommand[ROLL])), 450) * (1.0f / 450.0f);
         for (axis = 0; axis < 2; axis++)
         {
             rcCommandAxis = (float)rcCommand[axis];                             // Calculate common values for pid controllers
@@ -876,8 +877,8 @@ void loop(void)
                     ITermGYRO = errorGyroI[axis] * (float)cfg.I8[axis] * 0.01f;
                     if (f.HORIZON_MODE)
                     {
-                        PTerm = PTermACC + prop * (rcCommandAxis - PTermACC);
-                        ITerm = ITermACC + prop * (ITermGYRO     - ITermACC);
+                        PTerm = PTermACC + StickHorizonProp * (rcCommandAxis - PTermACC);
+                        ITerm = ITermACC + StickHorizonProp * (ITermGYRO     - ITermACC);
                     }
                     else
                     {
