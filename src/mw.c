@@ -176,7 +176,7 @@ void loop(void)
 {
     static uint32_t RTLGeneralTimer, AltRCTimer0 = 0, BaroAutoTimer, loopTime;
     static float    lastGyro[2] = {0, 0}, lastDTerm[2] = {0, 0}, LastGyFilt[3] = {0, 0, 0}, StickHorizonProp;
-    float           RCfactor, rcCommandAxis;
+    float           RCfactorDterm, RCfactorGYyw, RCfactorGYrp, rcCommandAxis;
     float           PTerm = 0, ITerm = 0, DTerm = 0, PTermACC = 0, ITermACC = 0, ITermGYRO = 0, error = 0;
     static uint8_t  ThrFstTimeCenter = 0, AutolandState = 0, AutostartState = 0, HoverThrcnt, RTLstate, ReduceBaroI = 0;
     static int8_t   Althightchange;
@@ -783,19 +783,20 @@ void loop(void)
 #ifdef BARO
         if (sensors(SENSOR_BARO)) Baro_update();                                // We call this after each hefty calculation
 #endif
-
-        RCfactor        = ACCDeltaTimeINS / (MainDptCut + ACCDeltaTimeINS);     // For Dterm
+        RCfactorDterm = ACCDeltaTimeINS / (MainDptCut + ACCDeltaTimeINS);       // For Dterm
+        if (cfg.flt_yw) RCfactorGYyw = ACCDeltaTimeINS / (filterGYyw + ACCDeltaTimeINS); // Yawgyro filter
+        if (cfg.flt_rp) RCfactorGYrp = ACCDeltaTimeINS / (filterGYrp + ACCDeltaTimeINS); // Roll & Pitch gyro filter
         cTimeLessJitter = (uint16_t)FLOATcycleTime & (uint16_t)0xFFFC;          // Filter last 2 bit jitter for YAW
 /*
         YAW
 */
-        if (cfg.flt_yw)                                                         // Gyro Filtering
+        if (cfg.flt_yw)                                                         // Gyro Filtering by HZ
         {
-            actualfiltergyroYW = (filterGYyw * gyroADC[YAW] + LastGyFilt[YAW]) * 0.25f / (1.0f + filterGYyw);
-            LastGyFilt[YAW]    = gyroADC[YAW];
+            LastGyFilt[YAW]   += RCfactorGYyw * (gyroADC[YAW] * 0.25f - LastGyFilt[YAW]);
+            actualfiltergyroYW = LastGyFilt[YAW];
         }
         else actualfiltergyroYW = (int32_t)gyroADC[YAW] >> 2;                   // Less Gyrojitter works actually better
-        
+
         if (cfg.rc_oldyw)                                                       // [0/1] 0 = multiwii 2.3 yaw, 1 = older yaw
         {
             tmp0    = ((int32_t)cfg.P8[YAW] * (100 - (int32_t)cfg.yawRate * abs_int((int32_t)rcCommand[YAW]) / 500)) / 100;
@@ -843,17 +844,17 @@ void loop(void)
         for (axis = 0; axis < 2; axis++)
         {
             rcCommandAxis = (float)rcCommand[axis];                             // Calculate common values for pid controllers
-            if (cfg.flt_rp)                                                     // Gyro Filtering
+            if (cfg.flt_rp)                                                     // Gyro Filtering by HZ
             {
-                actualfiltergyroRP = (filterGYrp * gyroADC[axis] + LastGyFilt[axis]) / (1.0f + filterGYrp);
-                LastGyFilt[axis]   = gyroADC[axis];
+                LastGyFilt[axis]   += RCfactorGYrp * (gyroADC[axis] - LastGyFilt[axis]);
+                actualfiltergyroRP  = LastGyFilt[axis];
             }
             else
             {
                 gyrorough          = gyroADC[axis] * 0.3125f;                   // This is better than the multiwii div by 4
                 actualfiltergyroRP = (float)gyrorough * 3.2f;
             }
-          
+
             if ((f.ANGLE_MODE || f.HORIZON_MODE)) error = constrain_flt(2.0f * rcCommandAxis + GPS_angle[axis], -500.0f, +500.0f) - angle[axis] + cfg.angleTrim[axis];
             switch (cfg.mainpidctrl)
             {
@@ -911,7 +912,7 @@ void loop(void)
             }                                                                   // End of Switch. Do common Dterm now
             tmp0flt          = (gyroADC[axis] - lastGyro[axis]) / ACCDeltaTimeINS;// Do Dterm with raw gyro values -> better result
             lastGyro[axis]   = gyroADC[axis];
-            lastDTerm[axis] += RCfactor * (tmp0flt - lastDTerm[axis]);
+            lastDTerm[axis] += RCfactorDterm * (tmp0flt - lastDTerm[axis]);
             DTerm            = lastDTerm[axis] * dynD8[axis] * 0.00007f;
             axisPIDflt[axis] = PTerm + ITerm - DTerm;
             if (f.GTUNE && f.ARMED) calculate_Gtune(false, axis);

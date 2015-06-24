@@ -113,8 +113,8 @@ retry:
     SonarLandWanted = cfg.snr_land;                               // Variable may be overwritten by failsave
 #endif
     MainDptCut = RCconstPI / (float)cfg.maincuthz;                // Initialize Cut off frequencies for mainpid D
-    filterGYrp = (float)(100 - cfg.flt_rp) * 0.1f;
-    filterGYyw = (float)(100 - cfg.flt_yw) * 0.1f;
+    if (cfg.flt_rp) filterGYrp = RCconstPI / (float)cfg.flt_rp;   // flt_rp can be zero avoid div by zero here
+    if (cfg.flt_yw) filterGYyw = RCconstPI / (float)cfg.flt_yw;   // flt_yw can be zero avoid div by zero here
 }
 
 uint16_t batteryAdcToVoltage(uint16_t src)
