@@ -134,6 +134,7 @@ static void    computeRC(void);
 static void    GetRCandAuxfromBuf(void);
 static void    ZeroErrorAngleI(void);
 static void    calculate_Gtune(bool inirun, uint8_t ax);
+static float   LPFfitness(float raw, float filtered);
 
 void pass(void)                                                             // Feature pass
 {
@@ -187,7 +188,7 @@ void loop(void)
     static int32_t  FilterVario, AutostartTargetHight, AutostartFilterAlt;
     static stdev_t  variovariance;
     float           tmp0flt, actualfiltergyroRP;
-    int32_t         tmp0, PTermYW, ITermYW, actualfiltergyroYW, errorYW, cTimeLessJitter, gyrorough;
+    int32_t         tmp0, PTermYW, ITermYW, actualfiltergyroYW, errorYW, cTimeLessJitter;
     int16_t         thrdiff;
     uint8_t         axis;
 
@@ -779,7 +780,7 @@ void loop(void)
         }
         else GPS_angle[0] = GPS_angle[1] = 0;                                   // Zero GPS influence on the ground
         BlockGPSAngles = false;
-
+       
 #ifdef BARO
         if (sensors(SENSOR_BARO)) Baro_update();                                // We call this after each hefty calculation
 #endif
@@ -790,13 +791,12 @@ void loop(void)
 /*
         YAW
 */
+        actualfiltergyroYW = (int32_t)gyroADC[YAW] >> 2;                        // Less Gyrojitter works actually better
         if (cfg.flt_yw)                                                         // Gyro Filtering by HZ
         {
-            LastGyFilt[YAW]   += RCfactorGYyw * (gyroADC[YAW] * 0.25f - LastGyFilt[YAW]);
-            actualfiltergyroYW = LastGyFilt[YAW];
+            LastGyFilt[YAW]   += RCfactorGYyw * (actualfiltergyroYW - LastGyFilt[YAW]);
+            actualfiltergyroYW = LPFfitness(actualfiltergyroYW, LastGyFilt[YAW]);
         }
-        else actualfiltergyroYW = (int32_t)gyroADC[YAW] >> 2;                   // Less Gyrojitter works actually better
-
         if (cfg.rc_oldyw)                                                       // [0/1] 0 = multiwii 2.3 yaw, 1 = older yaw
         {
             tmp0    = ((int32_t)cfg.P8[YAW] * (100 - (int32_t)cfg.yawRate * abs_int((int32_t)rcCommand[YAW]) / 500)) / 100;
@@ -844,17 +844,13 @@ void loop(void)
         for (axis = 0; axis < 2; axis++)
         {
             rcCommandAxis = (float)rcCommand[axis];                             // Calculate common values for pid controllers
+            tmp0 = gyroADC[axis] * 0.3125f;                                     // This is better than the multiwii div by 4
             if (cfg.flt_rp)                                                     // Gyro Filtering by HZ
             {
-                LastGyFilt[axis]   += RCfactorGYrp * (gyroADC[axis] - LastGyFilt[axis]);
-                actualfiltergyroRP  = LastGyFilt[axis];
+                LastGyFilt[axis] += RCfactorGYrp * (tmp0 - LastGyFilt[axis]);
+                tmp0              = LPFfitness(tmp0, LastGyFilt[axis]);
             }
-            else
-            {
-                gyrorough          = gyroADC[axis] * 0.3125f;                   // This is better than the multiwii div by 4
-                actualfiltergyroRP = (float)gyrorough * 3.2f;
-            }
-
+            actualfiltergyroRP = (float)tmp0 * 3.2f;
             if ((f.ANGLE_MODE || f.HORIZON_MODE)) error = constrain_flt(2.0f * rcCommandAxis + GPS_angle[axis], -500.0f, +500.0f) - angle[axis] + cfg.angleTrim[axis];
             switch (cfg.mainpidctrl)
             {
@@ -1265,6 +1261,19 @@ float sinWRAP(float x)                                                          
 float cosWRAP(float x)
 {
     return sinWRAP(x + M_PI_Half);
+}
+
+// Why is that here?        
+// Well lowpass filters have the ability to phaseshift that means in 180 degree case putting out the opposite direction.
+// Sometimes a lpf can put out a bigger value than the original.
+// We don't want both cases in our application so we filter them out and fall back to the raw sensor value.
+// So the fiddeling around a zero point is not filtered anymore but the trashing up values doesn't occure.
+// The purpose is to work on already deadbanded data (like masking out low bits or quantizing the values by other means)
+// with "zero" as reference. "LPFfitness" returns the value that seems to be more usable.
+static float LPFfitness(float raw, float filtered)
+{
+    if ((fabsf(filtered) < fabsf(raw)) && (((int32_t)raw ^ (int32_t)filtered) >= 0)) return filtered;
+    else  return raw;
 }
 
 /*
