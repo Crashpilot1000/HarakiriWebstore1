@@ -1264,16 +1264,15 @@ float cosWRAP(float x)
 }
 
 // Why is that here?        
-// Well lowpass filters have the ability to phaseshift that means in 180 degree case putting out the opposite direction.
-// Sometimes a lpf can put out a bigger value than the original.
-// We don't want both cases in our application so we filter them out and fall back to the raw sensor value.
-// So the fiddeling around a zero point is not filtered anymore but the trashing up values doesn't occure.
-// The purpose is to work on already deadbanded data (like masking out low bits or quantizing the values by other means)
-// with "zero" as reference. "LPFfitness" returns the value that seems to be more usable.
+// Lowpass filters have the ability to phaseshift that means in 180 degree case putting out the opposite direction.
+// The Result can be even bigger than the raw value. Cope with both situations here.
 static float LPFfitness(float raw, float filtered)
 {
-    if ((fabsf(filtered) < fabsf(raw)) && (((int32_t)raw ^ (int32_t)filtered) >= 0)) return filtered;
-    else  return raw;
+    float result;
+    float absraw = fabsf(raw);
+    if (((int32_t)raw ^ (int32_t)filtered) >= 0) result = filtered;             // Force same polarity
+    else  result = -filtered;
+    return constrain_flt(result, -absraw, absraw);
 }
 
 /*
