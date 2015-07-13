@@ -768,6 +768,8 @@ int32_t  abs_int(int32_t x);
 void     FiveElementSpikeFilterINT32(int32_t newval, int32_t *array);
 float    sinWRAP(float x);
 float    cosWRAP(float x);
+float    asin_fast(float x);
+float    atan2_fast(float y, float x);
 
 // IMU
 void     computeIMU(void);

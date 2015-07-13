@@ -187,7 +187,7 @@ void GPS_distance_cm_bearing(int32_t *TrgtGPS, uint32_t *dist, int32_t *bearing)
     Coslat2RAD = cosWRAP(lat2RAD);
     y          = sinWRAP(dLonRAW) * Coslat2RAD;
     x          = cosWRAP(lat1RAD) * sinWRAP(lat2RAD) - sinWRAP(lat1RAD) * Coslat2RAD * cosWRAP(dLonRAW);
-    *bearing   = constrain_int((int32_t)(atan2f(y, x) * RADtoDEG100), -18000, 18000);
+    *bearing   = constrain_int((int32_t)(atan2_fast(y, x) * RADtoDEG100), -18000, 18000);
     if (*bearing < 0) *bearing += 36000;
 }
 

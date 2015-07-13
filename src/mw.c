@@ -134,7 +134,6 @@ static void    computeRC(void);
 static void    GetRCandAuxfromBuf(void);
 static void    ZeroErrorAngleI(void);
 static void    calculate_Gtune(bool inirun, uint8_t ax);
-static float   LPFfitness(float raw, float filtered);
 
 void pass(void)                                                             // Feature pass
 {
@@ -795,7 +794,7 @@ void loop(void)
         if (cfg.flt_yw)                                                         // Gyro Filtering by HZ
         {
             LastGyFilt[YAW]   += RCfactorGYyw * (actualfiltergyroYW - LastGyFilt[YAW]);
-            actualfiltergyroYW = LPFfitness(actualfiltergyroYW, LastGyFilt[YAW]);
+            actualfiltergyroYW = LastGyFilt[YAW];
         }
         if (cfg.rc_oldyw)                                                       // [0/1] 0 = multiwii 2.3 yaw, 1 = older yaw
         {
@@ -848,7 +847,7 @@ void loop(void)
             if (cfg.flt_rp)                                                     // Gyro Filtering by HZ
             {
                 LastGyFilt[axis] += RCfactorGYrp * (tmp0 - LastGyFilt[axis]);
-                tmp0              = LPFfitness(tmp0, LastGyFilt[axis]);
+                tmp0              = LastGyFilt[axis];
             }
             actualfiltergyroRP = (float)tmp0 * 3.2f;
             if ((f.ANGLE_MODE || f.HORIZON_MODE)) error = constrain_flt(2.0f * rcCommandAxis + GPS_angle[axis], -500.0f, +500.0f) - angle[axis] + cfg.angleTrim[axis];
@@ -1263,16 +1262,82 @@ float cosWRAP(float x)
     return sinWRAP(x + M_PI_Half);
 }
 
-// Why is that here?        
-// Lowpass filters have the ability to phaseshift that means in 180 degree case putting out the opposite direction.
-// The Result can be even bigger than the raw value. Cope with both situations here.
-static float LPFfitness(float raw, float filtered)
+// http.developer.nvidia.com/Cg/asin.html
+// Handbook of Mathematical Functions
+// M. Abramowitz and I.A. Stegun, Ed.
+static float asin_common(float x)
 {
-    float result;
-    float absraw = fabsf(raw);
-    if (((int32_t)raw ^ (int32_t)filtered) >= 0) result = filtered;             // Force same polarity
-    else  result = -filtered;
-    return constrain_flt(result, -absraw, absraw);
+    return (x * (x * (-0.0187293f * x + 0.0742610f) - 0.2121144f) + 1.5707288f) * sqrtf(1.0f - x);
+}
+
+float asin_fast(float x)
+{
+    if(x < 0.0f)
+    {
+        x = -x;
+        return asin_common(x) - M_PI_Half;
+    }
+    else return M_PI_Half - asin_common(x);
+}
+
+
+//***************************************************************
+//    Efficient approximations for the arctangent function ,
+// Rajan, S. Sichun Wang Inkol, R. Joyal, A., May 2006
+//***************************************************************
+// atan2 for all quadrants by A. Hahn
+// Some mods by Crashpilot1000. The Casemachine still looks awful.
+// Max error ca. 0,08 Degree 
+float atan2_fast(float y, float x)
+{
+    uint8_t qCode = 0;
+    float q, absQ;
+    bool swap45 = (fabsf(y) > fabsf(x));
+
+    if (!x)                                                                   // Added https://en.wikipedia.org/wiki/Atan2
+    {
+        if (y > 0) return M_PI_Half;
+        else if (y < 0) return -M_PI_Half;
+        else return 0;
+    }
+    if ((y >= 0) && (x <= 0))      qCode = 1;
+    else if ((y <= 0) && (x <= 0)) qCode = 2;
+    else if ((y <= 0) && (x >= 0)) qCode = 3;
+    if (swap45)
+    {
+        if (y) q = x / y;                                                     // Avoid Div by 0 evil
+        else return 0;
+    }
+    else q = y / x;                                                           // x already checked
+    absQ = fabsf(q);  
+    q = 0.7853981634f * q - q * (absQ - 1) * (0.2447f + 0.0663f * absQ);   
+    if (swap45)
+    {
+        switch (qCode)
+        {
+        case 0:
+        case 1:
+            q = M_PI_Half - q;
+            break;
+        case 2:
+        case 3:
+            q = -M_PI_Half - q;
+            break;
+        }
+    }
+    else
+    {
+        switch (qCode)
+        {
+        case 1:
+            q = M_PI_Single + q;
+            break;
+        case 2:
+            q = -M_PI_Single + q;
+            break;
+        }
+    }
+    return q;
 }
 
 /*

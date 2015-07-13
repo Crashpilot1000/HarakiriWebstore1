@@ -11,7 +11,6 @@ uint16_t BaroDtUS = 0;
 // **************
 // gyro+acc IMU
 // **************
-
 static void RotGravAndMag(float *Grav, float *Mag, float *delta)              // Rotate vectors according to the gyro delta
 {
     float tmp[3], mat[3][3], cosx, sinx, cosy, siny, cosz, sinz, coszcosx, sinzcosx, coszsinx, sinzsinx;
@@ -105,8 +104,8 @@ void computeIMU(void)
     Norm         = sqrtf(tmp[0] + EstG[1] * EstG[1]);
     if(!Norm) return;                                                         // Should never happen but break here to prevent div-by-zero-evil
     Norm         = 1.0f / Norm;
-    rollRAD      =  atan2f(EstG[0] * Norm, EstG[2] * Norm);                   // Norm seems to be obsolete, but testing shows different result :)
-    pitchRAD     = -asinf(constrain_flt(EstG[1] * Norm, -1.0f, 1.0f));        // Ensure range, eliminate rounding stuff that might occure.
+    rollRAD      =  atan2_fast(EstG[0] * Norm, EstG[2] * Norm);               // Norm seems to be obsolete, but testing shows different result :)
+    pitchRAD     = -asin_fast(constrain_flt(EstG[1] * Norm, -1.0f, 1.0f));    // Ensure range, eliminate rounding stuff that might occure.
     cr           = cosWRAP(rollRAD);
     sr           = sinWRAP(rollRAD);
     cp           = cosWRAP(pitchRAD);
@@ -129,7 +128,7 @@ void computeIMU(void)
         }
         A = EstM[1] * tmp[0] - (EstM[0] * EstG[0] + EstM[2] * EstG[2]) * EstG[1];// Mwii method is more precise (less rounding errors)
         B = EstM[2] * EstG[0] - EstM[0] * EstG[2];
-        heading = wrap_180(atan2f(B, A * Norm) * RADtoDEG + magneticDeclination);
+        heading = wrap_180(atan2_fast(B, A * Norm) * RADtoDEG + magneticDeclination);
         if (sensors(SENSOR_GPS) && !UpsideDown)
         {
             tmp[0]    = heading * RADX;                                       // Do GPS INS rotate ACC X/Y to earthframe no centrifugal comp. yet
