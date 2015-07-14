@@ -1280,64 +1280,26 @@ float asin_fast(float x)
     else return M_PI_Half - asin_common(x);
 }
 
-
 //***************************************************************
 //    Efficient approximations for the arctangent function ,
 // Rajan, S. Sichun Wang Inkol, R. Joyal, A., May 2006
 //***************************************************************
-// atan2 for all quadrants by A. Hahn
-// Some mods by Crashpilot1000. The Casemachine still looks awful.
-// Max error ca. 0,08 Degree 
+// http://http.developer.nvidia.com/Cg/atan2.html (not working correctly!)
+// Working mixture between nvidia and Rajan
+// Error max: ca 0,08 Degree Speedgain: Up to 50% (double speed)
 float atan2_fast(float y, float x)
 {
-    uint8_t qCode = 0;
-    float q, absQ;
-    bool swap45 = (fabsf(y) > fabsf(x));
-
-    if (!x)                                                                   // Added https://en.wikipedia.org/wiki/Atan2
-    {
-        if (y > 0) return M_PI_Half;
-        else if (y < 0) return -M_PI_Half;
-        else return 0;
-    }
-    if ((y >= 0) && (x <= 0))      qCode = 1;
-    else if ((y <= 0) && (x <= 0)) qCode = 2;
-    else if ((y <= 0) && (x >= 0)) qCode = 3;
-    if (swap45)
-    {
-        if (y) q = x / y;                                                     // Avoid Div by 0 evil
-        else return 0;
-    }
-    else q = y / x;                                                           // x already checked
-    absQ = fabsf(q);  
-    q = 0.7853981634f * q - q * (absQ - 1) * (0.2447f + 0.0663f * absQ);   
-    if (swap45)
-    {
-        switch (qCode)
-        {
-        case 0:
-        case 1:
-            q = M_PI_Half - q;
-            break;
-        case 2:
-        case 3:
-            q = -M_PI_Half - q;
-            break;
-        }
-    }
-    else
-    {
-        switch (qCode)
-        {
-        case 1:
-            q = M_PI_Single + q;
-            break;
-        case 2:
-            q = -M_PI_Single + q;
-            break;
-        }
-    }
-    return q;
+    float res, absX, absY;
+    absX = fabsf(x);
+    absY = fabsf(y);
+    res  = max(absX, absY);
+    if (res) res = min(absX, absY) / res;
+    else res = 0.0f;
+    res = 0.7853981634f * res - res * (res - 1.0f) * (0.2447f + 0.0663f * res);
+    if (absY > absX) res = M_PI_Half - res;
+    if (x < 0) res = M_PI_Single - res;
+    if (y < 0) res = -res;
+    return res;
 }
 
 /*
