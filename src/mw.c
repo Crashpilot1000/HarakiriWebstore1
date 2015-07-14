@@ -1289,13 +1289,9 @@ float asin_fast(float x)
 #endif
 }
 
-//***************************************************************
-//    Efficient approximations for the arctangent function ,
-// Rajan, S. Sichun Wang Inkol, R. Joyal, A., May 2006
-//***************************************************************
 // http://http.developer.nvidia.com/Cg/atan2.html (not working correctly!)
-// Working mixture between nvidia and Rajan
-// Error max: ca 0,08 Degree Speedgain: Up to 50% (double speed)
+// Working mixture between nvidia and http://www.dsprelated.com/showthread/comp.dsp/21872-1.php
+// Error max: ca 0,0012 Degree Speedgain around 10us?
 float atan2_fast(float y, float x)
 {
 #ifdef atan2opt0
@@ -1303,13 +1299,22 @@ float atan2_fast(float y, float x)
 #endif
 
 #ifdef atan2opt1
-    float res, absX, absY;
+    #define ATANmagik1 -0.05030176426f                                          // Double: -0.05030176425872175099
+    #define ATANmagik2 -6.988836621f                                            // Double: -6.9888366207752135
+    #define ATANmagik3  3.145599955e-7f                                         // Double:  3.14559995508649281e-7
+    #define ATANmagik4  2.844463688f                                            // Double:  2.84446368839622429
+    #define ATANmagik5  0.8263997833f                                           // Double:  0.826399783297673451
+    #define ATANmagik6  0.1471039134f                                           // Double:  0.1471039133652469065841349249
+    #define ATANmagik7  0.6444640677f                                           // Double:  0.644464067689154755092299698
+    float res, rsq, absX, absY;
     absX = fabsf(x);
     absY = fabsf(y);
     res  = max(absX, absY);
     if (res) res = min(absX, absY) / res;
     else res = 0.0f;
-    res = 0.7853981634f * res - res * (res - 1.0f) * (0.2447f + 0.0663f * res);
+    rsq = res * res;
+    res = ATANmagik1 * (ATANmagik2 + res) * (ATANmagik3 + res) * (ATANmagik4 + ATANmagik5 * res + rsq) /
+          (1.0f + ATANmagik6 * res + ATANmagik7 * rsq);
     if (absY > absX) res = M_PI_Half - res;
     if (x < 0) res = M_PI_Single - res;
     if (y < 0) res = -res;
