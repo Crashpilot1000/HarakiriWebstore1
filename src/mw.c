@@ -1265,19 +1265,28 @@ float cosWRAP(float x)
 // http.developer.nvidia.com/Cg/asin.html
 // Handbook of Mathematical Functions
 // M. Abramowitz and I.A. Stegun, Ed.
+// Max Error 0,00006758 Rad = 0,0038720 Degree, 47% faster
+#ifdef asinopt1
 static float asin_common(float x)
 {
     return (x * (x * (-0.0187293f * x + 0.0742610f) - 0.2121144f) + 1.5707288f) * sqrtf(1.0f - x);
 }
+#endif
 
 float asin_fast(float x)
 {
+#ifdef asinopt0
+    return asinf(x);  
+#endif
+
+#ifdef asinopt1  
     if(x < 0.0f)
     {
         x = -x;
         return asin_common(x) - M_PI_Half;
     }
     else return M_PI_Half - asin_common(x);
+#endif
 }
 
 //***************************************************************
@@ -1289,6 +1298,11 @@ float asin_fast(float x)
 // Error max: ca 0,08 Degree Speedgain: Up to 50% (double speed)
 float atan2_fast(float y, float x)
 {
+#ifdef atan2opt0
+    return atan2f(y, x);
+#endif
+
+#ifdef atan2opt1
     float res, absX, absY;
     absX = fabsf(x);
     absY = fabsf(y);
@@ -1300,6 +1314,7 @@ float atan2_fast(float y, float x)
     if (x < 0) res = M_PI_Single - res;
     if (y < 0) res = -res;
     return res;
+#endif
 }
 
 /*
