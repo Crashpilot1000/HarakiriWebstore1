@@ -1291,7 +1291,8 @@ float asin_fast(float x)
 
 // http://http.developer.nvidia.com/Cg/atan2.html (not working correctly!)
 // Working mixture between nvidia and http://www.dsprelated.com/showthread/comp.dsp/21872-1.php
-// Error max: ca 0,00003 Degree Speedgain around 10us?
+// Thanks to ledvinap for refactoring and saving one multiplication https://github.com/cleanflight/cleanflight/pull/1107#issuecomment-121566100
+// Error max: ca 0,000027 Degree Speedgain around 10us?
 float atan2_fast(float y, float x)
 {
 #ifdef atan2opt0
@@ -1299,15 +1300,7 @@ float atan2_fast(float y, float x)
 #endif
 
 #ifdef atan2opt1
-    #define ATANmagik1 -0.05030176426f                                          // Double: -0.05030176425872175099
-    #define ATANmagik2 -6.988836621f                                            // Double: -6.9888366207752135
-    #define ATANmagik3  3.145599955e-7f                                         // Double:  3.14559995508649281e-7
-    #define ATANmagik4  2.844463688f                                            // Double:  2.84446368839622429
-    #define ATANmagik5  0.8263997833f                                           // Double:  0.826399783297673451
-    #define ATANmagik6  0.1471039134f                                           // Double:  0.1471039133652469065841349249
-    #define ATANmagik7  0.6444640677f                                           // Double:  0.644464067689154755092299698
-  
-    float res, rsq, absX, absY;
+    float res, absX, absY;
     if (!x)                                                                     // Added https://en.wikipedia.org/wiki/Atan2
     {
         if (y > 0) return M_PI_Half;
@@ -1317,9 +1310,8 @@ float atan2_fast(float y, float x)
     absX = fabsf(x);
     absY = fabsf(y);
     res  = min(absX, absY) / max(absX, absY);                                   // Can't be div by zero since x=0 checked
-    rsq  = res * res;
-    res  = ATANmagik1 * (ATANmagik2 + res) * (ATANmagik3 + res) * (ATANmagik4 + ATANmagik5 * res + rsq) /
-          (1.0f + ATANmagik6 * res + ATANmagik7 * rsq);
+    res  =-(((((0.05030176425872175f * res - 0.3099814292351353f) * res - 0.1474400705829684f) * res - 0.99997356613987f) * res - 3.14551665884836e-7f) /
+           ((0.6444640676891548f * res + 0.1471039133652469f) * res + 1.0f));
     if (absY > absX) res = M_PI_Half - res;
     if (x < 0) res = M_PI_Single - res;
     if (y < 0) res = -res;
