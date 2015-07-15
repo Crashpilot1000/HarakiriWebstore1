@@ -1291,7 +1291,7 @@ float asin_fast(float x)
 
 // http://http.developer.nvidia.com/Cg/atan2.html (not working correctly!)
 // Working mixture between nvidia and http://www.dsprelated.com/showthread/comp.dsp/21872-1.php
-// Error max: ca 0,0012 Degree Speedgain around 10us?
+// Error max: ca 0,00003 Degree Speedgain around 10us?
 float atan2_fast(float y, float x)
 {
 #ifdef atan2opt0
@@ -1306,14 +1306,19 @@ float atan2_fast(float y, float x)
     #define ATANmagik5  0.8263997833f                                           // Double:  0.826399783297673451
     #define ATANmagik6  0.1471039134f                                           // Double:  0.1471039133652469065841349249
     #define ATANmagik7  0.6444640677f                                           // Double:  0.644464067689154755092299698
+  
     float res, rsq, absX, absY;
+    if (!x)                                                                     // Added https://en.wikipedia.org/wiki/Atan2
+    {
+        if (y > 0) return M_PI_Half;
+        else if (y < 0) return -M_PI_Half;
+        else return 0;
+    }
     absX = fabsf(x);
     absY = fabsf(y);
-    res  = max(absX, absY);
-    if (res) res = min(absX, absY) / res;
-    else res = 0.0f;
-    rsq = res * res;
-    res = ATANmagik1 * (ATANmagik2 + res) * (ATANmagik3 + res) * (ATANmagik4 + ATANmagik5 * res + rsq) /
+    res  = min(absX, absY) / max(absX, absY);                                   // Can't be div by zero since x=0 checked
+    rsq  = res * res;
+    res  = ATANmagik1 * (ATANmagik2 + res) * (ATANmagik3 + res) * (ATANmagik4 + ATANmagik5 * res + rsq) /
           (1.0f + ATANmagik6 * res + ATANmagik7 * rsq);
     if (absY > absX) res = M_PI_Half - res;
     if (x < 0) res = M_PI_Single - res;
