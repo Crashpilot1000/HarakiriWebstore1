@@ -1290,9 +1290,8 @@ float asin_fast(float x)
 }
 
 // http://http.developer.nvidia.com/Cg/atan2.html (not working correctly!)
-// Working mixture between nvidia and http://www.dsprelated.com/showthread/comp.dsp/21872-1.php
-// Thanks to ledvinap for refactoring and saving one multiplication https://github.com/cleanflight/cleanflight/pull/1107#issuecomment-121566100
-// Error max: ca 0,000027 Degree Speedgain around 10us?
+// Working mixture between nvidia and http://stackoverflow.com/questions/26692859/best-machine-optimized-polynomial-minimax-approximation-to-arctangent-on-1-1
+// Error max: ca 0,0000136 Degree Speedgain just a few us but sustained speed.
 float atan2_fast(float y, float x)
 {
 #ifdef atan2opt0
@@ -1300,7 +1299,7 @@ float atan2_fast(float y, float x)
 #endif
 
 #ifdef atan2opt1
-    float res, absX, absY;
+    float res, s, a, absX, absY;
     if (!x)                                                                     // Added https://en.wikipedia.org/wiki/Atan2
     {
         if (y > 0) return M_PI_Half;
@@ -1310,8 +1309,16 @@ float atan2_fast(float y, float x)
     absX = fabsf(x);
     absY = fabsf(y);
     res  = min(absX, absY) / max(absX, absY);                                   // Can't be div by zero since x=0 checked
-    res  =-(((((0.05030176425872175f * res - 0.3099814292351353f) * res - 0.1474400705829684f) * res - 0.99997356613987f) * res - 3.14551665884836e-7f) /
-           ((0.6444640676891548f * res + 0.1471039133652469f) * res + 1.0f));
+    s    = res * res;
+    a    = 0x1.7ed22cp-9f;
+    a    = a * s - 0x1.0c2c2ep-6f;
+    a    = a * s + 0x1.61fdf6p-5f;
+    a    = a * s - 0x1.3556b4p-4f;
+    a    = a * s + 0x1.b4e12ep-4f;
+    a    = a * s - 0x1.230ae0p-3f;
+    a    = a * s + 0x1.9978eep-3f;
+    a    = a * s - 0x1.5554dap-2f;
+    res  = a * s * res + res;
     if (absY > absX) res = M_PI_Half - res;
     if (x < 0) res = M_PI_Single - res;
     if (y < 0) res = -res;

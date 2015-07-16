@@ -24,7 +24,7 @@
 // Define JUST ONE wanted sinf() method!
 //#define sinopt0                                           // Original sinf() function slow, accurate, >4Kb of EEPROM waste
 #define sinopt1                                             // Very accurate replacement: Max Abs Error: 0,00000688 Deg, Speedgain: 28%
-#define atan2opt1                                           // Error max: ca 0,000027 Degree Speedgain around 10us?
+#define atan2opt1                                           // Error max: ca 0,0000136 Degree Speedgain just a few us but sustained speed.
 #define asinopt1                                            // Max Error 0,00006758 Rad = 0,0038720 Degree, 47% faster
 
 // Baro Predef
