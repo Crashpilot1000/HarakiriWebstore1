@@ -100,12 +100,9 @@ void computeIMU(void)
     {
         for (i = 0; i < 3; i++) EstG[i] = (EstG[i] * (float)cfg.gy_gcmpf + accSmooth[i]) * INV_GY_CMPF;
     }
-    tmp[0]       = EstG[0] * EstG[0] + EstG[2] * EstG[2];                     // Start Angle Calculation. tmp[0] is used for heading below
-    Norm         = sqrtf(tmp[0] + EstG[1] * EstG[1]);
-    if(!Norm) return;                                                         // Should never happen but break here to prevent div-by-zero-evil
-    Norm         = 1.0f / Norm;
-    rollRAD      =  atan2_fast(EstG[0] * Norm, EstG[2] * Norm);               // Norm seems to be obsolete, but testing shows different result :)
-    pitchRAD     = -asin_fast(constrain_flt(EstG[1] * Norm, -1.0f, 1.0f));    // Ensure range, eliminate rounding stuff that might occure.
+    tmp[0]       = EstG[0] * EstG[0] + EstG[2] * EstG[2];                     // Start Angle Calculation. tmp[0] is also used for heading below
+    rollRAD      =  atan2_fast(EstG[0], EstG[2]);
+    pitchRAD     = -atan2_fast(EstG[1], sqrtf(tmp[0]));
     cr           = cosWRAP(rollRAD);
     sr           = sinWRAP(rollRAD);
     cp           = cosWRAP(pitchRAD);
@@ -126,9 +123,11 @@ void computeIMU(void)
             HaveNewMag = false;
             for (i = 0; i < 3; i++) EstM[i] = (EstM[i] * (float)cfg.gy_mcmpf + magADCfloat[i]) * INV_GY_CMPFM;
         }
+        Norm = sqrtf(tmp[0] + EstG[1] * EstG[1]);
+        if(!Norm) return;                                                     // Should never happen but break here to prevent div-by-zero-evil
         A = EstM[1] * tmp[0] - (EstM[0] * EstG[0] + EstM[2] * EstG[2]) * EstG[1];// Mwii method is more precise (less rounding errors)
         B = EstM[2] * EstG[0] - EstM[0] * EstG[2];
-        heading = wrap_180(atan2_fast(B, A * Norm) * RADtoDEG + magneticDeclination);
+        heading = wrap_180(atan2_fast(B, A / Norm) * RADtoDEG + magneticDeclination);
         if (sensors(SENSOR_GPS) && !UpsideDown)
         {
             tmp[0]    = heading * RADX;                                       // Do GPS INS rotate ACC X/Y to earthframe no centrifugal comp. yet
@@ -149,7 +148,7 @@ void computeIMU(void)
     }
     if(GroundAltInitialized && !UpsideDown)                                   // GroundAltInitialized can just be true if baro present
     {
-        tmp[0]  = ((-sp) * accADC[1] + sr * cp * accADC[0] + cp * cr * accADC[2]) - (float)cfg.sens_1G;
+        tmp[0]  = ((-sp) * accADC[1] + sr * cp * accADC[0] + TiltValue * accADC[2]) - (float)cfg.sens_1G;
         cms[2] += (ACCDeltaTimeINS / (ACC_ALT_RC + ACCDeltaTimeINS)) * (tmp[0] * CmsFac - cms[2]);
         vario  += cms[2] * constrain_flt(TiltValue, 0.5f, 1.0f);              // Empirical hightdrop reduction on tilt.
     }
