@@ -1138,6 +1138,12 @@ static void ZeroErrorAngleI(void)
 ****************************************************************************
 */
 
+#define RCconstPI   0.159154943092f                                             // 0.5f / M_PI;
+float DoRCvalue(float hz)
+{
+    return RCconstPI / hz;
+}
+
 int32_t SpecialIntegerRoundUp(float val)                                        // If neg value just represents a change in direction rounding to next higher number is "more" negative
 {
     if (val > 0) return val + 0.5f;

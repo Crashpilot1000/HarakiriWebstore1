@@ -46,23 +46,11 @@ bool l3g4200dDetect(sensor_t *gyro)
 
 void l3g4200dConfig(void)
 {
-    switch (cfg.gy_lpf)
-    {
-    case 32:
-        mpuLowPassFilter = L3G4200D_DLPF_32HZ;
-        break;
-    default:
-        cfg.gy_lpf = 54;                                      // Feedback for CLI if user typed in something like "90"
-    case 54:
-        mpuLowPassFilter = L3G4200D_DLPF_54HZ;
-        break;
-    case 78:
-        mpuLowPassFilter = L3G4200D_DLPF_78HZ;
-        break;
-    case 93:
-        mpuLowPassFilter = L3G4200D_DLPF_93HZ;
-        break;
-    }
+    if      (cfg.gy_lpf >= 93) mpuLowPassFilter = L3G4200D_DLPF_93HZ;
+    else if (cfg.gy_lpf >= 78) mpuLowPassFilter = L3G4200D_DLPF_78HZ;
+    else if (cfg.gy_lpf >= 54) mpuLowPassFilter = L3G4200D_DLPF_54HZ;
+    else if (cfg.gy_lpf >= 32) mpuLowPassFilter = L3G4200D_DLPF_32HZ;
+    else  mpuLowPassFilter = L3G4200D_DLPF_54HZ;
     i2cWrite(L3G4200D_ADDRESS, L3G4200D_CTRL_REG1, L3G4200D_POWER_ON | mpuLowPassFilter);
 }
 

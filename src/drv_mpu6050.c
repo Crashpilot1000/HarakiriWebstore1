@@ -81,32 +81,16 @@ static void mpu6050GyroInit(void)
     	  DLPF_CFG 4: ACC 21Hz  // GYRO  20Hz
     	  DLPF_CFG 5: ACC 10Hz  // GYRO  10Hz
     	  DLPF_CFG 6: ACC  5Hz  // GYRO   5Hz*/
-    switch (cfg.gy_lpf)
-    {
-    case 256:
-        DLPFCFG = 0;
-        break;
-    case 188:
-        DLPFCFG = 1;
-        break;
-    case 98:
-        DLPFCFG = 2;
-        break;
-    default:
-        cfg.gy_lpf = 42;                                     // Feedback for CLI if user typed in something like "90"
-    case 42:
-        DLPFCFG = 3;
-        break;
-    case 20:
-        DLPFCFG = 4;
-        break;
-    case 10:
-        DLPFCFG = 5;
-        break;
-    case 5:
-        DLPFCFG = 6;
-        break;
-    }
+
+    if      (cfg.gy_lpf >= 256) DLPFCFG = 0;
+    else if (cfg.gy_lpf >= 188) DLPFCFG = 1;
+    else if (cfg.gy_lpf >= 98)  DLPFCFG = 2;
+    else if (cfg.gy_lpf >= 42)  DLPFCFG = 3;
+    else if (cfg.gy_lpf >= 20)  DLPFCFG = 4;
+    else if (cfg.gy_lpf >= 10)  DLPFCFG = 5;
+    else if (cfg.gy_lpf >= 5)   DLPFCFG = 6;
+    else  DLPFCFG = 3;                                       // Default 42 Hz
+
     i2cWrite(MPU6050_ADDRESS, MPU_RA_CONFIG, DLPFCFG);       // CONFIG        -- EXT_SYNC_SET 0 (disable input pin for data sync) ; default DLPF_CFG = 0 => ACC bandwidth = 260Hz  GYRO bandwidth = 256Hz)
     i2cWrite(MPU6050_ADDRESS, MPU_RA_GYRO_CONFIG, BITS_FS_2000DPS);
     i2cWrite(MPU6050_ADDRESS, MPU_RA_ACCEL_CONFIG, BITS_FS_8G);

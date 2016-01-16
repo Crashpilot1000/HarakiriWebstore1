@@ -38,8 +38,6 @@
 #define RADtoDEG10  572.9577951308f                         // #define RADtoDEG10  1800.0f  / M_PI
 #define RADtoDEG100 5729.577951308f                         // #define RADtoDEG100 18000.0f / M_PI
 
-#define RCconstPI   0.159154943092f                         // 0.5f / M_PI;
-
 #define combine16(a, b) (((uint16_t)a  << 8) | b)           // Used for I2C Sensor data. WARNING! MAKE SURE THE TARGET IS INT_16 OR UINT_16! Or put directive in front of it like: (int16_t)combine16(foo,bar)
 #define min(a, b) ((a) < (b) ? (a) : (b))
 #define max(a, b) ((a) > (b) ? (a) : (b))

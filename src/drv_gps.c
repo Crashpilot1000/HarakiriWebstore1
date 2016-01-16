@@ -336,7 +336,7 @@ static void gpsPrint(const char *str)
 
 static uint8_t GPS_MTK_newFrame(uint8_t data)                                       // Crashpilot: This code is stupid but works
 {
-    static  uint8_t  pstep, lastbyte, LSLshifter,chkA, count, satn, fixtype;
+    static  uint8_t  pstep, lastbyte, LSLshifter, chkA, count, satn, fixtype;
     static  uint32_t lat, lon, alt, grspeed, grcourse;                              // MTK Dataset use unsigned for shiftoperation here
     int32_t tmp32     = 0;
     uint8_t startbyte = 0xD1, parsed = 0;                                           // Set default for 1.9 FW
@@ -615,16 +615,22 @@ static uint8_t GPS_NMEA_newFrame(char c)
     else return 0;
 }
 
+static void UBX_ChkSum_Upd(uint8_t *newdata, uint8_t *ckA, uint8_t *ckB)
+{
+    *ckA += *newdata;
+    *ckB += *ckA;
+}
+
 static uint8_t GPS_UBLOX_newFrame(uint8_t data)
 {
-#define Bufbytes 52                                                                 // Sizeof reports 52 Bytes no need to waste more
+#define UBXBufBytes 52                                                              // Sizeof reports 52 Bytes no need to waste more
     static union                                                                    // UBLOX Receive buffer
     {
         ubx_nav_posllh   posllh;
         ubx_nav_status   status;
         ubx_nav_solution solution;
         ubx_nav_velned   velned;
-        uint8_t          bytes[Bufbytes];
+        uint8_t          bytes[UBXBufBytes];
     } buffer;
     static uint16_t payloadlength, payloadcounter;
     static uint8_t  ck_a, ck_b, step = 0, UBXmsgid, UBXclass;
@@ -647,23 +653,23 @@ reset:
         break;
     case 2:                                                                         // Read Class
         step++;
-        ck_b     = data;
-        ck_a     = data;
+        ck_b = ck_a = 0;
+        UBX_ChkSum_Upd(&data, &ck_a, &ck_b);
         UBXclass = data;
         break;
     case 3:                                                                         // Read msgid
         step++;
-        ck_b    += (ck_a += data);
+        UBX_ChkSum_Upd(&data, &ck_a, &ck_b);
         UBXmsgid = data;
         break;
     case 4:                                                                         // Read payload low byte
         step++;
-        ck_b += (ck_a += data);
+        UBX_ChkSum_Upd(&data, &ck_a, &ck_b);
         payloadlength  = (uint16_t)data;
         break;
     case 5:                                                                         // Read payload high byte
         step++;
-        ck_b += (ck_a += data);
+        UBX_ChkSum_Upd(&data, &ck_a, &ck_b);
         payloadlength |= (uint16_t)((uint16_t)data << 8);
         if (payloadlength > 512)
         {
@@ -672,8 +678,8 @@ reset:
         }
         break;
     case 6:
-        ck_b += (ck_a += data);                                                     // checksum byte
-        if (payloadcounter < Bufbytes) buffer.bytes[payloadcounter] = data;         // Copy over data until buffer full
+        UBX_ChkSum_Upd(&data, &ck_a, &ck_b);
+        if (payloadcounter < UBXBufBytes) buffer.bytes[payloadcounter] = data;      // Copy over data until buffer full
         if (++payloadcounter == payloadlength) step++;                              // Read out everything offered and proceed
         break;
     case 7:

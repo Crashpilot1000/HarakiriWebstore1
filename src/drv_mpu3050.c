@@ -47,29 +47,13 @@ bool mpu3050Detect(sensor_t *gyro)
 
 void mpu3050Config(void)
 {
-    switch (cfg.gy_lpf)
-    {
-    case 256:
-        mpuLowPassFilter = MPU3050_DLPF_256HZ;
-        break;
-    case 188:
-        mpuLowPassFilter = MPU3050_DLPF_188HZ;
-        break;
-    case 98:
-        mpuLowPassFilter = MPU3050_DLPF_98HZ;
-        break;
-    default:
-        cfg.gy_lpf = 42;                                      // Feedback for CLI if user typed in something like "90"
-    case 42:
-        mpuLowPassFilter = MPU3050_DLPF_42HZ;
-        break;
-    case 20:
-        mpuLowPassFilter = MPU3050_DLPF_20HZ;
-        break;
-    case 10:
-        mpuLowPassFilter = MPU3050_DLPF_10HZ;
-        break;
-    }
+    if      (cfg.gy_lpf >= 256) mpuLowPassFilter = MPU3050_DLPF_256HZ;
+    else if (cfg.gy_lpf >= 188) mpuLowPassFilter = MPU3050_DLPF_188HZ;
+    else if (cfg.gy_lpf >= 98)  mpuLowPassFilter = MPU3050_DLPF_98HZ;
+    else if (cfg.gy_lpf >= 42)  mpuLowPassFilter = MPU3050_DLPF_42HZ;
+    else if (cfg.gy_lpf >= 20)  mpuLowPassFilter = MPU3050_DLPF_20HZ;
+    else if (cfg.gy_lpf >= 10)  mpuLowPassFilter = MPU3050_DLPF_10HZ;
+    else mpuLowPassFilter = MPU3050_DLPF_42HZ;
     i2cWrite(MPU3050_ADDRESS, MPU3050_DLPF_FS_SYNC, MPU3050_FS_SEL_2000DPS | mpuLowPassFilter);
 }
 

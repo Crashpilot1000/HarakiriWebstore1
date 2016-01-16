@@ -761,6 +761,7 @@ void     LD1_ON(void);
 void     devClear(stdev_t *dev);
 void     devPush(stdev_t *dev, float x);
 float    devStandardDeviation(stdev_t *dev);
+float     DoRCvalue(float hz);
 int32_t  SpecialIntegerRoundUp(float val);
 float    constrain_flt(float amt, float low, float high);
 int32_t  constrain_int(int32_t amt, int32_t low, int32_t high);

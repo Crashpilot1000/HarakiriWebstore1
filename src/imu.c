@@ -65,8 +65,8 @@ void computeIMU(void)
     FLOATcycleTime  = constrain_int(currentTime - prevT, 1, 60000);           // 1us - 60ms
     ACCDeltaTimeINS = FLOATcycleTime * 0.000001f;                             // ACCDeltaTimeINS is in seconds now
     prevT           = currentTime;
-    if(!cfg.acc_calibrated) return;																						// acc_calibrated just can turn true if acc present.
-    if(!init)                                                                 // Setup variables & constants
+    if (!cfg.acc_calibrated) return;																					// acc_calibrated just can turn true if acc present.
+    if (!init)                                                                // Setup variables & constants
     {
         init = true;
         AccScaleCMSS = OneGcmss / (float)cfg.sens_1G;                         // scale to cm/ss
@@ -74,10 +74,10 @@ void computeIMU(void)
         Tilt_25deg   = cosWRAP(25.0f * RADX);
         INV_GY_CMPF  = 1.0f / (float)(cfg.gy_gcmpf + 1);                      // Default 400
         INV_GY_CMPFM = 1.0f / (float)(cfg.gy_mcmpf + 1);                      // Default 200
-        if(!cfg.acc_lpfhz) cfg.acc_lpfhz = 0.001f;                            // Avoid DivByZero
-        ACC_RC       = RCconstPI / cfg.acc_lpfhz;                             // Default 0,536 Hz
-        ACC_ALT_RC   = RCconstPI / (float)cfg.acc_altlpfhz;                   // Default 10 Hz
-        ACC_GPS_RC   = RCconstPI / (float)cfg.acc_gpslpfhz;                   // Default 5 Hz
+        if (!cfg.acc_lpfhz) cfg.acc_lpfhz = 0.001f;                           // Avoid DivByZero
+        ACC_RC       = DoRCvalue(cfg.acc_lpfhz);                              // Default 0,536 Hz
+        ACC_ALT_RC   = DoRCvalue((float)cfg.acc_altlpfhz);                    // Default 10 Hz
+        ACC_GPS_RC   = DoRCvalue((float)cfg.acc_gpslpfhz);                    // Default 5 Hz
 
         for (i = 0; i < 3; i++)                                               // Preset some values to reduce runup time
         {
@@ -110,21 +110,21 @@ void computeIMU(void)
     TiltValue    = cr * cp;                                                   // We do this correctly here
     angle[ROLL]  = SpecialIntegerRoundUp( rollRAD  * RADtoDEG10);
     angle[PITCH] = SpecialIntegerRoundUp(-pitchRAD * RADtoDEG10);
-    if (TiltValue >= 0)   UpsDwnTimer = 0;
-    else if(!UpsDwnTimer) UpsDwnTimer = currentTime + 20000;                  // Use 20ms Timer here to make absolutely sure we are upsidedown
+    if (TiltValue >= 0)    UpsDwnTimer = 0;
+    else if (!UpsDwnTimer) UpsDwnTimer = currentTime + 20000;                 // Use 20ms Timer here to make absolutely sure we are upsidedown
     if (UpsDwnTimer && currentTime > UpsDwnTimer) UpsideDown = true;
     else UpsideDown = false;
     if (TiltValue > Tilt_25deg) f.SMALL_ANGLES_25 = 1;
     else f.SMALL_ANGLES_25 = 0;
     if (cfg.mag_calibrated)                                                   // mag_calibrated can just be true if MAG present
     {
-        if(HaveNewMag)                                                        // Only do Complementary filter when new MAG data are available
+        if (HaveNewMag)                                                       // Only do Complementary filter when new MAG data are available
         {
             HaveNewMag = false;
             for (i = 0; i < 3; i++) EstM[i] = (EstM[i] * (float)cfg.gy_mcmpf + magADCfloat[i]) * INV_GY_CMPFM;
         }
         Norm = sqrtf(tmp[0] + EstG[1] * EstG[1]);
-        if(!Norm) return;                                                     // Should never happen but break here to prevent div-by-zero-evil
+        if (!Norm) return;                                                    // Should never happen but break here to prevent div-by-zero-evil
         A = EstM[1] * tmp[0] - (EstM[0] * EstG[0] + EstM[2] * EstG[2]) * EstG[1];// Mwii method is more precise (less rounding errors)
         B = EstM[2] * EstG[0] - EstM[0] * EstG[2];
         heading = wrap_180(atan2_fast(B, A / Norm) * RADtoDEG + magneticDeclination);
@@ -146,7 +146,7 @@ void computeIMU(void)
             }
         }
     }
-    if(GroundAltInitialized && !UpsideDown)                                   // GroundAltInitialized can just be true if baro present
+    if (GroundAltInitialized && !UpsideDown)                                  // GroundAltInitialized can just be true if baro present
     {
         tmp[0]  = ((-sp) * accADC[1] + sr * cp * accADC[0] + TiltValue * accADC[2]) - (float)cfg.sens_1G;
         cms[2] += (ACCDeltaTimeINS / (ACC_ALT_RC + ACCDeltaTimeINS)) * (tmp[0] * CmsFac - cms[2]);
